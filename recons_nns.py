@@ -138,7 +138,8 @@ def main(argv):
         no_pca_attack(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
                         test_prediction,adv_examples_test,X_test,y_test)
         recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
-                        test_prediction,adv_examples_test,rd,X_train,y_train,X_test,y_test)
+                        test_prediction,adv_examples_test,rd,X_train,y_train,
+                        X_test,y_test)
     elif model_name=='cnn':
         no_pca_attack(model_name,abs_path_o)
 
