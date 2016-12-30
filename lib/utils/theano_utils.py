@@ -74,8 +74,8 @@ def val_fn(input_var,target_var,test_loss,test_acc):
 
 #------------------------------------------------------------------------------#
 def conf_fn(input_var,model_predict):
-    conf_temp=T.max(model_predict, axis=1)
-    conf_temp=conf_temp.mean()
+    conf_temp=T.mean(T.max(model_predict, axis=1),dtype=theano.config.floatX)
+    # conf_temp=conf_temp.mean()
     return theano.function([input_var],conf_temp,
                                 allow_input_downcast=True)
 #------------------------------------------------------------------------------#

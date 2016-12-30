@@ -127,7 +127,7 @@ def main(argv):
     adv_examples_test=np.zeros((test_len,784,no_of_mags))
 
     # Reduced dimensions used
-    rd=100
+    rd_list=[331,100,50,40,30,20,10]
 
     rel_path_o="output_data/"
     abs_path_o=os.path.join(script_dir,rel_path_o)
@@ -135,18 +135,15 @@ def main(argv):
         os.makedirs(abs_path_o)
     # Creating adv. examples
     if model_name in ('mlp', 'custom'):
-        no_pca_attack(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
+        fsg_attack(model_name,abs_path_o,input_var,target_var,
                         test_prediction,adv_examples_test,X_test,y_test)
-        recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
-                        test_prediction,adv_examples_test,rd,X_train,y_train,
-                        X_test,y_test)
+        for rd in rd_list:
+            recons_defense(model_name,abs_path_o,input_var,target_var,
+                            test_prediction,adv_examples_test,rd,X_train,
+                            y_train,X_test,y_test,DEPTH,WIDTH)
     elif model_name=='cnn':
-        no_pca_attack(model_name,abs_path_o)
+        fsg_attack(model_name,abs_path_o)
 
-
-    # rd_list=[784,331,100,50,40,30,20,10]
-    # #d_list=[784]
-    # pca_attack(30)
     #
     # pool=multiprocessing.Pool(processes=8)
     # pool.map(pca_attack,rd_list)

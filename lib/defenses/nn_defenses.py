@@ -7,34 +7,20 @@ from sklearn.decomposition import PCA
 from ..utils.theano_utils import *
 
 # Function to create adv. examples using the FSG method
-def recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
-                test_prediction,adv_examples_test,rd,X_train,y_train,X_test,y_test):
-    # model_name=args[0]
-    # global network
-    # network=args[1]
-    # abs_path_o=args[1]
+def recons_defense(model_name,abs_path_o,input_var,target_var,test_prediction,
+        adv_examples_test,rd,X_train,y_train,X_test,y_test,DEPTH=2,WIDTH=100):
     if model_name in ('mlp','custom'):
-        # DEPTH=args[2]
-        # WIDTH=args[3]
-        plotfile=open(abs_path_o+'FSG_MNIST_data_hidden_'+str(DEPTH)+'_'
-                    +str(WIDTH)+'_.txt','a')
+        plotfile=open(abs_path_o+'FSG_MNIST_nn_'+str(DEPTH)+'_'
+                    +str(WIDTH)+'.txt','a')
     elif model_name=='cnn':
-        plotfile=open(abs_path_o+'FSG_MNIST_data_cnn_papernot.txt','a')
-    # plotfile.write('rd,Dev.,Wrong,C.,n_C.,Adv.,C.,n_C.,Pure,C.,n_C.,Train \n')
-    # plotfile.close()
-    # input_var=args[4]
-    # target_var=args[5]
-    # test_prediction=args[6]
-    # adv_examples_test=args[7]
-    # rd=args[8]
+        plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot.txt','a')
+    plotfile.write('\n')
 
-    #Getting the principal axes
-    #Reshaping for PCA function
     train_len=len(X_train)
     test_len=len(X_test)
 
+    #Reshaping for PCA function
     PCA_in_train=X_train.reshape(train_len,784)
-    # PCA_in_val=X_val.reshape(test_len,784)
     PCA_in_test=X_test.reshape(test_len,784)
 
     print("Doing PCA over the training data")
@@ -42,6 +28,7 @@ def recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
     pca=PCA(n_components=rd)
     pca_train=pca.fit(PCA_in_train)
 
+    # Reconstructing training and test data
     X_train_dr=pca.transform(PCA_in_train)
     X_test_dr=pca.transform(PCA_in_test)
     X_train_rev=pca.inverse_transform(X_train_dr)
@@ -51,8 +38,6 @@ def recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
 
     # Evaluating on re-constructed inputs
     test_model_eval(input_var,target_var,test_prediction,X_test_rev,y_test)
-
-    start_time=time.time()
 
     mag_count=0
     predictor=predict_fn(input_var, test_prediction)
@@ -65,58 +50,40 @@ def recons_defense(model_name,abs_path_o,DEPTH,WIDTH,input_var,target_var,
     indices_c=indexer(X_test_rev,y_test)
     i_c=np.where(indices_c==1)[0]
     for DEV_MAG in np.linspace(0.01,0.1,10):
+        start_time=time.time()
+        o_list=[]
         X_adv_dr=pca.transform(adv_examples_test[:,:,mag_count])
         recons_adv=(pca.inverse_transform(X_adv_dr)).reshape((test_len,1,28,28))
         # Accuracy vs. true labels. Confidence on mismatched predictions
         loss_w,acc_w=validator(recons_adv,y_test)
+        c_w=100-acc_w*100
         indices_w=indexer(recons_adv,y_test)
         i_w=np.where(indices_w==0)[0]
-        conf_w=confidence(recons_adv[i_w])
+        conf_w=np.float64(confidence(recons_adv[i_w]))
+        o_list.extend([c_w,conf_w])
         #Accuracy vs. predicted labels
         loss_a,acc_a=validator(recons_adv,predictor(X_test_rev))
+        c_a=100-acc_a*100
         indices_a=indexer(recons_adv,predictor(X_test_rev))
         i_a=np.where(indices_a==0)[0]
-        conf_a=confidence(recons_adv[i_a])
+        conf_a=np.float64(confidence(recons_adv[i_a]))
+        o_list.extend([c_a,conf_a])
         # Accuracy for adv. examples generated from correctly classified
         # examples
         loss_p,acc_p=validator(recons_adv[i_c],y_test[i_c])
+        c_p=100-acc_p*100
         indices_p=indexer(recons_adv[i_c],y_test[i_c])
         i_p=np.where(indices_p==0)[0]
-        conf_p=confidence(recons_adv[i_p])
-        # print indices.type
-        # count_wrong=count_wrong+ca
-        adv_predict=predictor(recons_adv)
-        # conf_wrong=conf_wrong+adv_conf
+        conf_p=np.float64(confidence(recons_adv[i_c][i_p]))
+        o_list.extend([c_p,conf_p])
+
         recons_adv=recons_adv.reshape((10000,784))
         adv_examples_test[:,:,mag_count]=recons_adv
-        # adv_examples_test[b_count*1000:(b_count+1)*1000,:,mag_count]=adv_x
-        # b_count=b_count+1
-        print 100-acc_w*100
-        print conf_w
-        print 100-acc_a*100
-        print conf_a
-        print 100-acc_p*100
-        print conf_p
-        # plotfile=open(abs_path_o+'FSG_MNIST_data_hidden_'+str(DEPTH)+'_'
-        #                 +str(WIDTH)+'_'+'.txt','a')
-        # adv_acc=100-count_wrong/b_count*100
-        # adv_acc_2=100-count_adv/b_count*100
-        # adv_count=adv_acc*test_len/100
-        # c_count=test_len-adv_count
-        # ini_count=test_acc/test_batches*test_len
-        # # plotfile=open(abs_path_o+'FSG_MNIST_data_cnn_papernot.txt','a')
-        # print("Deviation {} took {:.3f}s".format(
-        #     DEV_MAG, time.time() - start_time))
-        # plotfile.write('no_dr'+","+str(DEV_MAG)+","+
-        #                 str.format("{0:.3f}",adv_acc)+","+
-        #                 str.format("{0:.3f}",conf_wrong/adv_count)+","+
-        #                 str.format("{0:.3f}",conf_correct/c_count)+","+
-        #                 str(count_adv/test_len*100)+","+
-        #                 str.format("{0:.3f}",conf_adv/count_adv)+","+
-        #                 str.format("{0:.3f}",conf_n_adv/(test_len-count_adv))+","+
-        #                 str(count_abs_wrong/test_len*100)+","+
-        #                 str.format("{0:.3f}",conf_abs/count_abs_wrong)+","+
-        #                 str.format("{0:.3f}",conf_abs_c/(ini_count-count_abs_wrong))+","+
-        #                 str(1)+"\n")
-        # plotfile.close()
+
+        plotfile.write(str(rd)+",")
+        for item in o_list[0:-1]:
+            plotfile.write(str.format("{0:.3f}",item)+",")
+        plotfile.write(str.format("{0:.3f}",o_list[-1]))
+        plotfile.write("\n")
         mag_count=mag_count+1
+    plotfile.close()
