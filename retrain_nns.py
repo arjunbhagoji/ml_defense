@@ -57,8 +57,8 @@ def main(argv):
         model_saver(network,model_dict)
 
     # Checking performance on test set
-    test_model_eval(model_dict,input_var,target_var,test_prediction,
-                                                                X_test,y_test)
+    test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
+                                                                        y_test)
 
     # No. of deviations to consider
     no_of_mags=10
@@ -71,15 +71,8 @@ def main(argv):
     adv_x_all=fsg_attack(model_dict,input_var,target_var,
                     test_prediction,no_of_mags,X_test,y_test,p_flag)
     for rd in rd_list:
-        recons_defense(model_dict,input_var,target_var,test_prediction,
-                        adv_x_all,rd,X_train,y_train,X_test,y_test)
-    # elif model_name=='cnn':
-    #     fsg_attack(model_name,abs_path_o)
+        retrain_defense(model_dict,input_var,target_var,test_prediction,
+                        adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val)
 
-    #
-    # pool=multiprocessing.Pool(processes=8)
-    # pool.map(pca_attack,rd_list)
-    # pool.close()
-    # pool.join()
 if __name__ == "__main__":
    main(sys.argv[1:])

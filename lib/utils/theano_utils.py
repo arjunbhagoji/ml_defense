@@ -1,9 +1,15 @@
+import os,sys
 import numpy as np
 import theano
 import theano.tensor as T
 import time
+from os.path import dirname
 
 import lasagne
+
+script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+rel_path_o="output_data/"
+abs_path_o=os.path.join(script_dir,rel_path_o)
 
 #------------------------------------------------------------------------------#
 # Function to predict network output
@@ -82,25 +88,30 @@ def conf_fn(input_var,model_predict):
 
 #------------------------------------------------------------------------------#
 def model_trainer(input_var,target_var,prediction,test_prediction,params,
-                        NUM_EPOCHS,rate,batchsize,X_train,y_train,X_val,y_val):
+                    model_dict,batchsize,X_train,y_train,X_val,y_val):
+
+    rate=model_dict['rate']
+    num_epochs=model_dict['num_epochs']
+
     loss=loss_fn(prediction, target_var)
     # Create update expressions for training, i.e., how to modify the
     # parameters at each training step. Here, we use Stochastic Gradient
     # Descent (SGD) with Nesterov momentum.
-    updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=rate, momentum=0.9)
+    updates = lasagne.updates.nesterov_momentum(loss, params,
+                                            learning_rate=rate, momentum=0.9)
 
     test_loss = loss_fn(test_prediction, target_var)
     test_acc = acc_fn(test_prediction, target_var)
 
     # Compile a function performing a training step on a mini-batch (by giving
     # the updates dictionary) and returning the corresponding training loss:
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    train_fn = theano.function([input_var, target_var], loss, updates=updates,
+                                                    allow_input_downcast=True)
 
     # Compile a second function computing the validation loss and accuracy:
     validator=val_fn(input_var, target_var, test_loss, test_acc)
     # We iterate over epochs:
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(num_epochs):
         # In each epoch, we do a full pass over the training data:
         train_err = 0
         train_batches = 0
@@ -123,7 +134,7 @@ def model_trainer(input_var,target_var,prediction,test_prediction,params,
 
         # Then we print the results for this epoch:
         print("Epoch {} of {} took {:.3f}s".format(
-            epoch + 1, NUM_EPOCHS, time.time() - start_time))
+            epoch + 1, num_epochs, time.time() - start_time))
         print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
         print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
         print("  validation accuracy:\t\t{:.2f} %".format(
@@ -131,7 +142,8 @@ def model_trainer(input_var,target_var,prediction,test_prediction,params,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def test_model_eval(input_var,target_var,test_prediction,X_test,y_test):
+def test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
+                                                                y_test,rd=None):
     test_loss = loss_fn(test_prediction, target_var)
     test_acc = acc_fn(test_prediction, target_var)
     validator=val_fn(input_var,target_var,test_loss,test_acc)
@@ -140,7 +152,7 @@ def test_model_eval(input_var,target_var,test_prediction,X_test,y_test):
     test_err = 0
     test_acc = 0
     test_batches = 0
-    test_conf= 0
+    test_conf = 0
     for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
         inputs, targets = batch
         err, acc = validator(inputs, targets)
@@ -149,34 +161,37 @@ def test_model_eval(input_var,target_var,test_prediction,X_test,y_test):
         test_acc += acc
         test_conf += conf
         test_batches += 1
-    # for i in range(test_len):
-    #     x_curr=X_test[i].reshape((1,1,28,28))
-    #     test_conf+=confidence(x_curr)[0][predict_fn(x_curr)[0]]
 
     print("Final results:")
     print("  test loss:\t\t\t{:.6f}".format(test_err / test_batches))
     print("  test accuracy:\t\t{:.2f} %".format(test_acc / test_batches * 100))
     print("  test confidence:\t\t{:.3f} ".format(test_conf / test_batches))
 
-    avg_test_acc=test_acc/test_batches*100
+    test_acc=test_acc/test_batches*100
+    test_conf=test_conf/test_batches
 
-    # # Writing the test results out to a file
-    # rel_path_o="Output_data/"
-    # abs_path_o=os.path.join(script_dir,rel_path_o)
-    #
-    # if not os.path.exists(abs_path_o):
-    #     os.makedirs(abs_path_o)
-    #
-    # myfile=open(abs_path_o+'MNIST_test_perform.txt','a')
-    # if model_name in ('mlp','custom'):
-    #     myfile.write('Model: FC10_'+str(DEPTH)+'_'+str(WIDTH)+
-    #                 '_'+'\n')
-    # elif model_name=='cnn':
-    #     myfile.write('Model: model_cnn_9_layers_papernot'+'\n')
-    # myfile.write("reduced_dim: "+"N.A."+"\n"+"Epochs: "
-    #             +str(NUM_EPOCHS)+"\n"+"Test accuracy: "
-    #             +str(avg_test_acc)+"\n")
-    # myfile.write("#####################################################"+
-    #                 "####"+"\n")
-    # myfile.close()
+    model_name=model_dict['model_name']
+
+    if not os.path.exists(abs_path_o):
+        os.makedirs(abs_path_o)
+
+    if model_name in ('mlp','custom'):
+        depth=model_dict['depth']
+        width=model_dict['width']
+        plotfile=open(abs_path_o+'MNIST_nn_'+str(depth)+'_'
+                    +str(width)+'.txt','a')
+        if rd==None:
+            plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
+                                        str.format("{0:.3f}",test_conf)+'\n')
+        elif rd!=None:
+            plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
+                                        str.format("{0:.3f}",test_conf)+'\n')
+    elif model_name=='cnn':
+        plotfile=open(abs_path_o+'MNIST_cnn_papernot.txt','a')
+        if rd==None:
+            plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
+                                        str.format("{0:.3f}",test_conf)+'\n')
+        elif rd!=None:
+            plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
+                                        str.format("{0:.3f}",test_conf)+'\n')
 #------------------------------------------------------------------------------#
