@@ -170,8 +170,7 @@ def retrain_defense(model_dict,input_var,target_var,test_prediction,
     input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
 
-    network,model_exist_flag,model_dict=model_creator(input_var,target_var,
-                                                            model_dict,rd)
+    network,model_exist_flag=model_creator(input_var,target_var,model_dict,rd)
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)

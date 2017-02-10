@@ -4,7 +4,6 @@ import theano.tensor as T
 
 import lasagne
 
-
 #------------------------------------------------------------------------------#
 # Function to create a customizable MLP, with dropout for hidden and input
 # layers

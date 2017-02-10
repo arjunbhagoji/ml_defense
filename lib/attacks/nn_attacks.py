@@ -7,6 +7,7 @@ import theano
 import theano.tensor as T
 
 from ..utils.theano_utils import *
+from ..utils.attack_utils import *
 
 script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
 rel_path_o="output_data/"
@@ -14,7 +15,7 @@ abs_path_o=os.path.join(script_dir,rel_path_o)
 
 # Function to create adv. examples using the FSG method
 def fsg_attack(model_dict,input_var,target_var,test_prediction,
-                    no_of_mags,X_test,y_test,print_flag=1):
+                    no_of_mags,X_test,y_test,print_flag=1,rd=None):
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -34,15 +35,25 @@ def fsg_attack(model_dict,input_var,target_var,test_prediction,
         if model_name in ('mlp','custom'):
             depth=model_dict['depth']
             width=model_dict['width']
-            plotfile=open(abs_path_o+'FSG_MNIST_nn_'+str(depth)+'_'
-                        +str(width)+'.txt','a')
+            if rd==None:
+                plotfile=open(abs_path_o+'FSG_mod_MNIST_nn_'+str(depth)+'_'
+                            +str(width)+'.txt','a')
+            elif rd!=None:
+                plotfile=open(abs_path_o+'FSG_mod_MNIST_nn_'+str(depth)+'_'
+                            +str(width)+'_strategic.txt','a')
         elif model_name=='cnn':
             plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot.txt','a')
         plotfile.write('eps,c_w,conf_w,c_a,conf_a,c_p,conf_p \n')
-        plotfile.write('no_defense'+'\n')
+        if rd==None:
+            plotfile.write('no_defense'+'\n')
+        elif rd!=None:
+            plotfile.write(str(rd)+'\n')
 
     test_len=len(X_test)
-    adv_x_all=np.zeros((test_len,784,no_of_mags))
+    if rd==None:
+        adv_x_all=np.zeros((test_len,784,no_of_mags))
+    elif rd!=None:
+        adv_x_all=np.zeros((test_len,rd,no_of_mags))
 
     mag_count=0
     predictor=predict_fn(input_var, test_prediction)
@@ -54,16 +65,25 @@ def fsg_attack(model_dict,input_var,target_var,test_prediction,
     indexer=index_fn(test_prediction, input_var, target_var)
     indices_c=indexer(X_test,y_test)
     i_c=np.where(indices_c==1)[0]
-    for dev_mag in np.linspace(0.01,0.1,10):
+    if rd==None:
+        scales=length_scales(X_test.reshape(test_len,784), y_test)
+        adv_x=np.zeros((10000,1,28,28))
+    elif rd!=None:
+        scales=length_scales(X_test.reshape(test_len,rd), y_test)
+        adv_x=np.zeros((10000,1,rd))
+    for dev_mag in np.linspace(0.01,1.0,50):
         start_time=time.time()
         o_list=[]
         # Gradient w.r.t to input and current class
         delta_x=gradient(X_test,y_test)
+        # Norm of gradient
+        delta_x_norm=np.linalg.norm(delta_x.reshape(test_len,rd),axis=1)
         # Sign of gradient
         delta_x_sign=np.sign(delta_x)
         #delta_x_sign=delta_x_sign/np.linalg.norm((delta_x_sign))
         #Perturbed images
-        adv_x=X_test+dev_mag*delta_x_sign
+        for i in range(test_len):
+            adv_x[i]=X_test[i]+dev_mag*scales[y_test[i]]*(delta_x[i]/delta_x_norm[i])
         # Accuracy vs. true labels. Confidence on mismatched predictions
         loss_w,acc_w=validator(adv_x,y_test)
         c_w=100-acc_w*100
@@ -89,7 +109,10 @@ def fsg_attack(model_dict,input_var,target_var,test_prediction,
         o_list.extend([c_p,conf_p])
 
         # Saving adversarial examples
-        adv_x_all[:,:,mag_count]=adv_x.reshape((10000,784))
+        if rd==None:
+            adv_x_all[:,:,mag_count]=adv_x.reshape((test_len,784))
+        elif rd!=None:
+            adv_x_all[:,:,mag_count]=adv_x.reshape((test_len,rd))
 
         mag_count=mag_count+1
 

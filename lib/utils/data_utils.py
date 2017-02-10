@@ -71,16 +71,13 @@ def load_dataset():
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(input_var,target_var,model_dict=None,rd=None):
+def model_creator(input_var,target_var,rd=None,model_dict=None):
     model_exist_flag=0
     if model_dict==None:
         model_dict={}
         parser=argparse.ArgumentParser()
         parser.add_argument("-m","--model",default='mlp',
                                 help="Specify neural network model",type=str)
-        # parser.add_argument("-f","--model_exist_flag",default=0,
-        #                         help="Specify existence of model file")
-
         args=parser.parse_args()
         model_dict.update({'model_name':args.model})
     model_name=model_dict['model_name']
@@ -213,40 +210,3 @@ def model_saver(network,model_dict,rd=None):
             np.savez(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
             +'_PCA.npz',*lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#
-
-# #------------------------------------------------------------------------------#
-# def model_creator_rd(input_var,target_var,model_name,rd):
-#     model_exist_flag=0
-#
-#     if model_name=='cnn':
-#         network=build_cnn_rd(input_var,rd)
-#         if os.path.exists(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)+
-#                             '.npz'):
-#             model_exist_flag=1
-#     elif model_name=='mlp':
-#         num_epochs=500
-#         depth=2
-#         width=100
-#         rate=0.01
-#         activation='sigmoid'
-#         network, layer_1, layer_2=build_hidden_fc_rd(input_var,activation,
-#                                                         width,rd)
-#         if os.path.exists(abs_path_m+'model_FC10_'+str(depth)+'_'+str(width)
-#                             +'_'+str(rd)+'_PCA.npz'):
-#             model_exist_flag=1
-#     elif model_name=='custom':
-#         NUM_EPOCHS=500
-#         DEPTH=2
-#         WIDTH=100
-#         DROP_IN=0.2
-#         DROP_HIDDEN=0.5
-#         rate=0.01
-#         activation='sigmoid'
-#         network = build_custom_mlp_rd(input_var,activation, int(DEPTH),
-#                                 int(WIDTH),float(DROP_IN), float(DROP_HIDDEN))
-#         if os.path.exists(abs_path_m+'model_FC10_'+str(DEPTH)+'_'+str(WIDTH)+'_'
-#                                                     +str(rd)+'_PCA_drop.npz'):
-#             model_exist_flag=1
-#
-#     return network,model_exist_flag,model_dict
-# #------------------------------------------------------------------------------#

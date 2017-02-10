@@ -18,6 +18,12 @@ from lib.utils.lasagne_utils import *
 from lib.attacks.nn_attacks import *
 from lib.defenses.nn_defenses import *
 
+script_dir = dirname(os.path.abspath(__file__))
+rel_path_v="visual_data/"
+abs_path_v=os.path.join(script_dir,rel_path_v)
+if not os.path.exists(abs_path_v):
+    os.makedirs(abs_path_v)
+
 #from lasagne.regularization import l2
 
 def main(argv):
@@ -61,18 +67,22 @@ def main(argv):
                                                                         y_test)
 
     # No. of deviations to consider
-    no_of_mags=10
+    no_of_mags=50
 
     # Reduced dimensions used
     rd_list=[331,100,50,40,30,20,10]
-    # rd_list=[100]
+    # rd_list=[50]
 
     # Creating adv. examples
     adv_x_all=fsg_attack(model_dict,input_var,target_var,
                     test_prediction,no_of_mags,X_test,y_test,p_flag)
-    for rd in rd_list:
-        retrain_defense(model_dict,input_var,target_var,test_prediction,
-                        adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val)
+    for i in range(10):
+        x=adv_x_all[0,:,i].reshape((28,28))
+        plt.imsave(abs_path_v+'mnist_'+str(i)+'.png',x*255, cmap='gray',
+                    vmin=0, vmax=255)
+    # for rd in rd_list:
+    #     retrain_defense(model_dict,input_var,target_var,test_prediction,
+    #                     adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val)
 
 if __name__ == "__main__":
    main(sys.argv[1:])
