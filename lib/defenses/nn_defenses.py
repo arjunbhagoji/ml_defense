@@ -81,26 +81,6 @@ def pca_dr(X_train,X_test,rd,recons_flag=None):
         X_test_dr=X_test_dr.reshape((test_len,1,rd))
         return X_train_dr,X_test_dr, pca
 
-def file_create(model_dict,rd=None,recons_flag=None):
-    model_name=model_dict['model_name']
-    if model_name in ('mlp','custom'):
-        depth=model_dict['depth']
-        width=model_dict['width']
-        if recons_flag==None:
-            plotfile=open(abs_path_o+'FSG_MNIST_nn_'+str(depth)+'_'
-                        +str(width)+'_retrain.txt','a')
-        elif recons_flag!=None:
-            plotfile=open(abs_path_o+'FSG_MNIST_nn_'+str(depth)+'_'
-                        +str(width)+'_recons.txt','a')
-    elif model_name=='cnn':
-        if recons_flag==None:
-            plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot_retrain.txt','a')
-        elif recons_flag!=None:
-            plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot_recons.txt','a')
-    plotfile.write(str(rd)+'\n')
-    return plotfile
-
-
 # Function to implement the reconstruction defense
 def recons_defense(model_dict,input_var,target_var,test_prediction,
         adv_x_all,rd,X_train,y_train,X_test,y_test):

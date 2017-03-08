@@ -143,7 +143,7 @@ def model_trainer(input_var,target_var,prediction,test_prediction,params,
 
 #------------------------------------------------------------------------------#
 def test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
-                                                                y_test,rd=None):
+                                                    y_test,rd=None,rev=None):
     test_loss = loss_fn(test_prediction, target_var)
     test_acc = acc_fn(test_prediction, target_var)
     validator=val_fn(input_var,target_var,test_loss,test_acc)
@@ -178,7 +178,7 @@ def test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
     if model_name in ('mlp','custom'):
         depth=model_dict['depth']
         width=model_dict['width']
-        plotfile=open(abs_path_o+'MNIST_nn_'+str(depth)+'_'
+        plotfile=open(abs_path_o+'Utility_MNIST_nn_'+str(depth)+'_'
                     +str(width)+'.txt','a')
         if rd==None:
             plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
@@ -192,6 +192,10 @@ def test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
             plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
                                         str.format("{0:.3f}",test_conf)+'\n')
         elif rd!=None:
-            plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
-                                        str.format("{0:.3f}",test_conf)+'\n')
+            if rev==None:
+                plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
+                                            str.format("{0:.3f}",test_conf)+'\n')
+            if rev!=None:
+                plotfile.write(str(rd)+'_rev,'+str.format("{0:.3f}",test_acc)+','+
+                                            str.format("{0:.3f}",test_conf)+'\n')
 #------------------------------------------------------------------------------#

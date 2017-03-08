@@ -76,10 +76,10 @@ def main(argv):
     # Creating adv. examples
     adv_x_all=fsg_attack(model_dict,input_var,target_var,
                     test_prediction,no_of_mags,X_test,y_test,p_flag)
-    for i in range(10):
-        x=adv_x_all[0,:,i].reshape((28,28))
-        plt.imsave(abs_path_v+'mnist_'+str(i)+'.png',x*255, cmap='gray',
-                    vmin=0, vmax=255)
+    # for i in range(10):
+    #     x=adv_x_all[0,:,i].reshape((28,28))
+    #     plt.imsave(abs_path_v+'mnist_'+str(i)+'.png',x*255, cmap='gray',
+    #                 vmin=0, vmax=255)
     # for rd in rd_list:
     #     retrain_defense(model_dict,input_var,target_var,test_prediction,
     #                     adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val)

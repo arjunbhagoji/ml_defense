@@ -9,6 +9,10 @@ rel_path_i="input_data/"
 abs_path_i=os.path.join(script_dir,rel_path_i)
 rel_path_m="models/"
 abs_path_m=os.path.join(script_dir,rel_path_m)
+if not os.path.exists(abs_path_m):
+    os.makedirs(abs_path_m)
+if not os.path.exists(abs_path_i):
+    os.makedirs(abs_path_i)
 
 #------------------------------------------------------------------------------#
 #Function to load MNIST data
@@ -71,7 +75,7 @@ def load_dataset():
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(input_var,target_var,rd=None,model_dict=None):
+def model_creator(input_var,target_var,rd=None,rev=None,model_dict=None):
     model_exist_flag=0
     if model_dict==None:
         model_dict={}
@@ -84,7 +88,7 @@ def model_creator(input_var,target_var,rd=None,model_dict=None):
 
     if model_name=='cnn':
         num_epochs=50
-        rate=0.1
+        rate=0.01
         activation='relu'
         model_dict.update({'num_epochs':num_epochs,'rate':rate,
                             'activation':activation})
@@ -93,10 +97,16 @@ def model_creator(input_var,target_var,rd=None,model_dict=None):
             if os.path.exists(abs_path_m+'model_cnn_9_layers_papernot.npz'):
                 model_exist_flag=1
         elif rd!=None:
-            network=build_cnn_rd(input_var,rd)
-            if os.path.exists(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)+
-                                '_PCA.npz'):
-                model_exist_flag=1
+            if rev==None:
+                network=build_cnn_rd(input_var,rd)
+                if os.path.exists(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)+
+                                    '_PCA.npz'):
+                    model_exist_flag=1
+            if rev!=None:
+                network=build_cnn(input_var)
+                if os.path.exists(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)+
+                                    '_PCA_rev.npz'):
+                    model_exist_flag=1
     elif model_name=='mlp':
         num_epochs=500
         depth=2
@@ -142,7 +152,7 @@ def model_creator(input_var,target_var,rd=None,model_dict=None):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_loader(model_dict,rd=None):
+def model_loader(model_dict,rd=None,rev=None):
     model_name=model_dict['model_name']
     if model_name=='mlp':
         depth=model_dict['depth']
@@ -171,14 +181,19 @@ def model_loader(model_dict,rd=None):
             with np.load(abs_path_m+'model_cnn_9_layers_papernot.npz') as f:
                 param_values = [f['arr_%d' % i] for i in range(len(f.files))]
         elif rd!=None:
-            with np.load(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
-                                                            +'_PCA.npz') as f:
-                param_values = [f['arr_%d' % i] for i in range(len(f.files))]
+            if rev==None:
+                with np.load(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
+                                                                +'_PCA.npz') as f:
+                    param_values = [f['arr_%d' % i] for i in range(len(f.files))]
+            elif rev!=None:
+                with np.load(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
+                                                                +'_PCA_rev.npz') as f:
+                    param_values = [f['arr_%d' % i] for i in range(len(f.files))]
     return param_values
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_saver(network,model_dict,rd=None):
+def model_saver(network,model_dict,rd=None,rev=None):
     model_name=model_dict['model_name']
     if not os.path.exists(abs_path_m):
         os.makedirs(abs_path_m)
@@ -207,6 +222,10 @@ def model_saver(network,model_dict,rd=None):
             np.savez(abs_path_m+'model_cnn_9_layers_papernot.npz',
                         *lasagne.layers.get_all_param_values(network))
         elif rd!=None:
-            np.savez(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
-            +'_PCA.npz',*lasagne.layers.get_all_param_values(network))
+            if rev==None:
+                np.savez(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
+                +'_PCA.npz',*lasagne.layers.get_all_param_values(network))
+            elif rev!=None:
+                np.savez(abs_path_m+'model_cnn_9_layers_papernot_'+str(rd)
+                +'_PCA_rev.npz',*lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#

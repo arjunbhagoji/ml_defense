@@ -13,10 +13,11 @@ from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
 from lib.utils.theano_utils import *
-from lib.utils.data_utils import *
 from lib.utils.lasagne_utils import *
+from lib.utils.data_utils import *
+from lib.utils.attack_utils import *
+from lib.utils.dr_utils import *
 from lib.attacks.nn_attacks import *
-from lib.defenses.nn_defenses import *
 
 #from lasagne.regularization import l2
 
@@ -68,13 +69,20 @@ def main(argv):
     # rd_list=[100]
 
     # Creating adv. examples
-    adv_x_all=fsg_attack(model_dict,input_var,target_var,
-                    test_prediction,no_of_mags,X_test,y_test,p_flag)
-    for rd in rd_list:
-        recons_defense(model_dict,input_var,target_var,test_prediction,
-                        adv_x_all,rd,X_train,y_train,X_test,y_test)
-    # elif model_name=='cnn':
-    #     fsg_attack(model_name,abs_path_o)
+    adv_x_all,output_list,dev_list=attack_wrapper(input_var,target_var,
+                                    test_prediction,no_of_mags,X_test,y_test)
+
+    plotfile=file_create(model_dict, fsg_flag=1)
+
+    for i in range(len(dev_list)):
+        o_list=output_list[i]
+        eps=dev_list[i]
+        file_out(o_list,eps,plotfile)
+
+
+    # for rd in rd_list:
+    #     recons_defense(model_dict,input_var,target_var,test_prediction,
+    #                     adv_x_all,rd,X_train,y_train,X_test,y_test)
 
     #
     # pool=multiprocessing.Pool(processes=8)

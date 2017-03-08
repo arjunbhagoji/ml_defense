@@ -119,32 +119,32 @@ def build_hidden_fc_rd(rd,input_var=None,activation='sigmoid', WIDTH=100):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def build_cnn_rd(rd,input_var=None):
+def build_cnn_rd(input_var,rd):
     # Input layer, as usual:
     network = lasagne.layers.InputLayer(shape=(None, 1, rd),
                                         input_var=input_var)
 
     # 2 Convolutional layers with 32 kernels of size 5x5.
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+    network = lasagne.layers.Conv1DLayer(
+            network, num_filters=32, filter_size=5,
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+    network = lasagne.layers.Conv1DLayer(
+            network, num_filters=32, filter_size=5,
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
 
     # Max-pooling layer of factor 2 in both dimensions:
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
+    network = lasagne.layers.MaxPool1DLayer(network, pool_size=2)
 
     # Another convolution with 64 5x5 kernels, and another 2x2 pooling:
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(5, 5),
+    network = lasagne.layers.Conv1DLayer(
+            network, num_filters=64, filter_size=5,
             nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(5, 5),
+    network = lasagne.layers.Conv1DLayer(
+            network, num_filters=64, filter_size=5,
             nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
+    network = lasagne.layers.MaxPool1DLayer(network, pool_size=2)
 
     # Two fully-connected layers of 200 units:
     network = lasagne.layers.DenseLayer(network, num_units=200,
