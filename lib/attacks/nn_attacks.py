@@ -11,35 +11,36 @@ from ..utils.theano_utils import *
 from ..utils.attack_utils import *
 
 script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-rel_path_o="output_data/"
-abs_path_o=os.path.join(script_dir,rel_path_o)
+rel_path_o = "output_data/"
+abs_path_o = os.path.join(script_dir, rel_path_o)
 
-def fsg(x_curr,y_curr,adv_x,dev_mag,batch_len,b_c,gradient,rd,rev):
+def fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     # Gradient w.r.t to input and current class
-    delta_x=gradient(x_curr,y_curr)
+    delta_x = gradient(x_curr, y_curr)
     # Sign of gradient
-    delta_x_sign=np.sign(delta_x)
-    adv_x[b_c*batch_len:(b_c+1)*batch_len]=x_curr+dev_mag*delta_x_sign
+    delta_x_sign = np.sign(delta_x)
+    adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
 
-def fg(x_curr,y_curr,adv_x,dev_mag,batch_len,b_c,gradient,rd,rev):
+def fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     # Gradient w.r.t to input and current class
-    delta_x=gradient(x_curr,y_curr)
+    delta_x = gradient(x_curr, y_curr)
     # Calulating norm of gradient
-    if rd==None or rev!=None:
-        delta_x_norm=np.linalg.norm(delta_x.reshape(batch_len,784),axis=1)
-    elif rd!=None and rev==None:
-        delta_x_norm=np.linalg.norm(delta_x.reshape(batch_len,rd),axis=1)
+    if rd == None or rev != None:
+        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, 784), axis=1)
+    elif rd != None and rev == None:
+        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, rd), axis=1)
 
     # Perturbed images
     for i in range(batch_len):
-        if delta_x_norm[i]==0.0:
-            adv_x[b_c*batch_len+i]=x_curr[i]
+        if delta_x_norm[i] == 0.0:
+            adv_x[b_c*batch_len + i] = x_curr[i]
         else:
-            adv_x[b_c*batch_len+i]=x_curr[i]+dev_mag*(delta_x[i]/delta_x_norm[i])
+            adv_x[b_c*batch_len + i] = (x_curr[i]
+                                        + dev_mag*(delta_x[i]/delta_x_norm[i]))
 
 # Function to create adv. examples using the FSG method
-def attack_wrapper(input_var,target_var,test_prediction,
-                    no_of_mags,X_test,y_test,rd=None,rev=None):
+def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
+                   y_test, rd=None, rev=None):
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -55,54 +56,56 @@ def attack_wrapper(input_var,target_var,test_prediction,
     # X_test=X_test
     # y_test=y_test[0:5000]
 
-    test_len=len(X_test)
+    test_len = len(X_test)
 
-    if rd==None or rev!=None:
-        adv_x_all=np.zeros((test_len,784,no_of_mags))
-    elif rd!=None or rev==None:
-        adv_x_all=np.zeros((test_len,rd,no_of_mags))
+    if rd == None or rev != None:
+        adv_x_all = np.zeros((test_len, 784, no_of_mags))
+    elif rd != None or rev == None:
+        adv_x_all = np.zeros((test_len, rd, no_of_mags))
 
-    if rd==None or rev!=None:
-        scales=length_scales(X_test.reshape(test_len,784), y_test)
-        adv_x=np.zeros((test_len,1,28,28))
-    elif rd!=None and rev==None:
-        scales=length_scales(X_test.reshape(test_len,rd), y_test)
-        adv_x=np.zeros((test_len,1,rd))
+    if rd == None or rev != None:
+        scales = length_scales(X_test.reshape(test_len, 784), y_test)
+        adv_x = np.zeros((test_len, 1, 28, 28))
+    elif rd != None and rev == None:
+        scales = length_scales(X_test.reshape(test_len, rd), y_test)
+        adv_x = np.zeros((test_len, 1, rd))
 
-    validator,indexer,predictor,confidence=local_fns(input_var,target_var,
-                                                                test_prediction)
-    indices_c=indexer(X_test,y_test)
-    i_c=np.where(indices_c==1)[0]
+    validator, indexer, predictor, confidence = local_fns(input_var, target_var,
+                                                          test_prediction)
+    indices_c = indexer(X_test, y_test)
+    i_c = np.where(indices_c == 1)[0]
 
-    dev_list=np.linspace(0.1,5.0,no_of_mags)
+    dev_list = np.linspace(0.1, 5.0, no_of_mags)
 
-    gradient=grad_fn(input_var, target_var, test_prediction)
+    gradient = grad_fn(input_var, target_var, test_prediction)
 
-    o_list=[]
+    o_list = []
 
-    mag_count=0
+    mag_count = 0
     for dev_mag in dev_list:
         # start_time=time.time()
-        batch_len=1000
-        b_c=0
-        for batch in iterate_minibatches(X_test,y_test,batch_len,shuffle=False):
-            x_curr,y_curr=batch
-            fsg(x_curr,y_curr,adv_x,dev_mag,batch_len,b_c,gradient,rd,rev)
+        batch_len = 1000
+        b_c = 0
+        for batch in iterate_minibatches(X_test, y_test, batch_len,
+                                         shuffle=False):
+            x_curr, y_curr = batch
+            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd,
+                rev)
             # fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
-            b_c=b_c+1
+            b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
-        o_list.append(acc_calc_all(adv_x,y_test,X_test,i_c,validator,indexer,
-                                                        predictor,confidence))
+        o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
+                                   indexer, predictor, confidence))
 
         # Saving adversarial examples
-        if rd==None or rev!=None:
-            adv_x_all[:,:,mag_count]=adv_x.reshape((test_len,784))
-        elif rd!=None and rev==None:
-            adv_x_all[:,:,mag_count]=adv_x.reshape((test_len,rd))
+        if rd == None or rev != None:
+            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, 784))
+        elif rd != None and rev == None:
+            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, rd))
 
-        mag_count=mag_count+1
+        mag_count += 1
 
-    return adv_x_all,o_list,dev_list
+    return adv_x_all, o_list, dev_list
 
 def l_bfgs_attack(input_var,target_var,test_prediction,
                     X_test,y_test,rd=None,max_dev=None):
