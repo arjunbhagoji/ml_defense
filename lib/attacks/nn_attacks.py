@@ -51,6 +51,10 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     : param no_of_mags: No. of epsilons to consider
     : param X_test: Test data
     : param y_test: Test data labels
+
+    : return adv_x_all: list of adv. samples
+    : return o_list: list of [acc., conf.] tested on adv. samples
+    : return dev_list: list of used epsilons
     """
 
     # X_test=X_test
@@ -86,23 +90,19 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
         # start_time=time.time()
         batch_len = 1000
         b_c = 0
-        for batch in iterate_minibatches(X_test, y_test, batch_len,
-                                         shuffle=False):
+        for batch in iterate_minibatches(X_test, y_test, batch_len, shuffle=False):
             x_curr, y_curr = batch
-            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd,
-                rev)
+            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
             # fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
                                    indexer, predictor, confidence))
-
         # Saving adversarial examples
         if rd == None or rev != None:
             adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, 784))
         elif rd != None and rev == None:
             adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, rd))
-
         mag_count += 1
 
     return adv_x_all, o_list, dev_list

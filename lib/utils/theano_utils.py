@@ -164,39 +164,39 @@ def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
         test_batches += 1
 
     print("Final results:")
-    print("  test loss:\t\t\t{:.6f}".format(test_err / test_batches))
-    print("  test accuracy:\t\t{:.2f} %".format(test_acc / test_batches * 100))
-    print("  test confidence:\t\t{:.3f} ".format(test_conf / test_batches))
+    print("  test loss:\t\t\t{:.6f}".format(test_err/test_batches))
+    print("  test accuracy:\t\t{:.2f} %".format(test_acc/test_batches*100))
+    print("  test confidence:\t\t{:.3f} ".format(test_conf/test_batches))
 
-    test_acc=test_acc/test_batches*100
-    test_conf=test_conf/test_batches
+    test_acc = test_acc/test_batches*100
+    test_conf = test_conf/test_batches
 
-    model_name=model_dict['model_name']
+    model_name = model_dict['model_name']
 
     if not os.path.exists(abs_path_o):
         os.makedirs(abs_path_o)
 
-    if model_name in ('mlp','custom'):
+    if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
         width = model_dict['width']
-        plotfile = open(abs_path_o+'Utility_MNIST_nn_'+str(depth)+'_'
-                    +str(width)+'.txt','a')
-        if rd==None:
-            plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
-                                        str.format("{0:.3f}",test_conf)+'\n')
-        elif rd!=None:
-            plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
-                                        str.format("{0:.3f}",test_conf)+'\n')
-    elif model_name=='cnn':
-        plotfile=open(abs_path_o+'MNIST_cnn_papernot.txt','a')
-        if rd==None:
-            plotfile.write('no_dr,'+str.format("{0:.3f}",test_acc)+','+
-                                        str.format("{0:.3f}",test_conf)+'\n')
-        elif rd!=None:
-            if rev==None:
-                plotfile.write(str(rd)+','+str.format("{0:.3f}",test_acc)+','+
-                                            str.format("{0:.3f}",test_conf)+'\n')
-            if rev!=None:
-                plotfile.write(str(rd)+'_rev,'+str.format("{0:.3f}",test_acc)+','+
-                                            str.format("{0:.3f}",test_conf)+'\n')
+        plotfile = open(abs_path_o + 'Utility_MNIST_nn_' + str(depth) + '_'
+                        + str(width) + '.txt', 'a')
+        if rd == None:
+            plotfile.write('no_dr,' + str.format("{0:.3f}", test_acc) + ','
+                           + str.format("{0:.3f}", test_conf) + '\n')
+        elif rd != None:
+            plotfile.write(str(rd) + ',' + str.format("{0:.3f}", test_acc) + ','
+                           + str.format("{0:.3f}", test_conf) + '\n')
+    elif model_name == 'cnn':
+        plotfile = open(abs_path_o + 'MNIST_cnn_papernot.txt', 'a')
+        if rd == None:
+            plotfile.write('no_dr,' + str.format("{0:.3f}", test_acc) + ','
+                           + str.format("{0:.3f}", test_conf) + '\n')
+        elif rd != None:
+            if rev == None:
+                plotfile.write(str(rd) + ',' + str.format("{0:.3f}", test_acc)
+                               + ',' + str.format("{0:.3f}", test_conf) + '\n')
+            if rev != None:
+                plotfile.write(str(rd) + '_rev,' + str.format("{0:.3f}", test_acc)
+                               + ',' + str.format("{0:.3f}", test_conf) + '\n')
 #------------------------------------------------------------------------------#

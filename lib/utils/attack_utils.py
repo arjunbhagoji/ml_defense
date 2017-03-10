@@ -54,88 +54,83 @@ def naive_untargeted_attack(X,y):
         distances.append(min(curr_distances))
     return distances
 
-def local_fns(input_var,target_var,test_prediction):
-    predictor=predict_fn(input_var, test_prediction)
-    confidence= conf_fn(input_var,test_prediction)
-    gradient=grad_fn(input_var, target_var, test_prediction)
-    test_loss=loss_fn(test_prediction, target_var)
-    test_acc=acc_fn(test_prediction, target_var)
-    validator=val_fn(input_var, target_var, test_loss, test_acc)
-    indexer=index_fn(test_prediction, input_var, target_var)
-    return validator,indexer,predictor,confidence
+def local_fns(input_var, target_var, test_prediction):
+    predictor = predict_fn(input_var, test_prediction)
+    confidence = conf_fn(input_var, test_prediction)
+    gradient = grad_fn(input_var, target_var, test_prediction)
+    test_loss = loss_fn(test_prediction, target_var)
+    test_acc = acc_fn(test_prediction, target_var)
+    validator = val_fn(input_var, target_var, test_loss, test_acc)
+    indexer = index_fn(test_prediction, input_var, target_var)
+    return validator, indexer, predictor, confidence
 
-def acc_calc(X_adv,y,validator,indexer,confidence):
-    loss_i,acc_i=validator(X_adv,y)
-    c_i=100-acc_i*100
-    indices_i=indexer(X_adv,y)
-    i_i=np.where(indices_i==0)[0]
-    conf_i=np.float64(confidence(X_adv[i_i]))
-    return [c_i,conf_i]
+def acc_calc(X_adv, y, validator, indexer, confidence):
+    loss_i, acc_i = validator(X_adv, y)
+    c_i = 100 - acc_i*100
+    indices_i = indexer(X_adv, y)
+    i_i = np.where(indices_i == 0)[0]
+    conf_i = np.float64(confidence(X_adv[i_i]))
+    return [c_i, conf_i]
 
-
-def acc_calc_all(X_adv,y_test,X_test_mod,i_c,validator,indexer,predictor,
-                confidence):
-    o_list=[]
+def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
+                 confidence):
+    o_list = []
     # Accuracy vs. true labels. Confidence on mismatched predictions
-    c_w,conf_w=acc_calc(X_adv, y_test, validator, indexer, confidence)
-    o_list.extend([c_w,conf_w])
-    #Accuracy vs. predicted labels
-    c_a,conf_a=acc_calc(X_adv, predictor(X_test_mod), validator, indexer,
-                        confidence)
-    o_list.extend([c_a,conf_a])
-    # Accuracy for adv. examples generated from correctly classified
-    # examples
-    c_p,conf_p=acc_calc(X_adv[i_c], y_test[i_c], validator, indexer, confidence)
-    o_list.extend([c_p,conf_p])
+    c_w, conf_w = acc_calc(X_adv, y_test, validator, indexer, confidence)
+    o_list.extend([c_w, conf_w])
+    # Accuracy vs. predicted labels
+    c_a, conf_a = acc_calc(X_adv, predictor(X_test_mod), validator, indexer,
+                           confidence)
+    o_list.extend([c_a, conf_a])
+    # Accuracy for adv. examples generated from correctly classified examples
+    c_p, conf_p = acc_calc(X_adv[i_c], y_test[i_c], validator, indexer,
+                           confidence)
+    o_list.extend([c_p, conf_p])
     return o_list
 
-def file_create(model_dict,rd=None,fsg_flag=None,strat_flag=None,rev=None):
+def file_create(model_dict, defense=None, fsg_flag=None, strat_flag=None, rev=None):
+    """
+    Creates and returns a file descriptor, named corresponding to model, rd,
+    fsg, strat, and rev
+    """
     model_name=model_dict['model_name']
-    if model_name in ('mlp','custom'):
-        depth=model_dict['depth']
-        width=model_dict['width']
-        if strat_flag==None:
-            if fsg_flag==None:
-                plotfile=open(abs_path_o+'Opt_MNIST_nn_'+str(depth)+'_'
-                            +str(width)+'.txt','a')
-            elif fsg_flag!=None:
-                plotfile=open(abs_path_o+'FSG_mod_MNIST_nn_'+str(depth)+'_'
-                            +str(width)+'.txt','a')
-        elif strat_flag!=None:
-            if fsg_flag==None:
-                plotfile=open(abs_path_o+'Opt_MNIST_nn_'+str(depth)+'_'
-                            +str(width)+'strategic.txt','a')
-            elif fsg_flag!=None:
-                plotfile=open(abs_path_o+'FSG_mod_MNIST_nn_'+str(depth)+'_'
-                            +str(width)+'strategic.txt','a')
-    elif model_name=='cnn':
-        if strat_flag==None:
-            if fsg_flag!=None:
-                plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot.txt','a')
-            elif fsg_flag==None:
-                plotfile=open(abs_path_o+'Opt_MNIST_cnn_papernot.txt','a')
-        if strat_flag!=None:
-            if fsg_flag!=None:
-                if rev==None:
-                    plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot_strat.txt','a')
-                if rev!=None:
-                    plotfile=open(abs_path_o+'FSG_MNIST_cnn_papernot_strat_rev.txt','a')
-            elif fsg_flag==None:
-                plotfile=open(abs_path_o+'Opt_MNIST_cnn_papernot_strat.txt','a')
+    # MLP model
+    if model_name in ('mlp', 'custom'):
+        depth = model_dict['depth']
+        width = model_dict['width']
+        if fsg_flag == None:
+            fname = abs_path_o + 'Opt_MNIST_nn_' + str(depth) + '_' + str(width)
+        else:
+            fname = abs_path_o + 'FSG_mod_MNIST_nn_' + str(depth) + '_' + str(width)
+    # CNN model
+    elif model_name == 'cnn':
+        if fsg_flag == None: fname = abs_path_o + 'Opt_MNIST_cnn_papernot'
+        else: fname = abs_path_o + 'FSG_MNIST_cnn_papernot'
 
-    plotfile.write(str(rd)+'\n')
+    if strat_flag != None: fname += '_strat'
+    if rev != None: fname += '_rev'
+    if defense != None: fname += ('_' + defense)
+    plotfile = open(fname + '.txt', 'a')
     return plotfile
 
-def file_out(o_list,dev_mag,plotfile):
-    plotfile.write(str(dev_mag)+",")
-    for item in o_list[0:-1]:
-        plotfile.write(str.format("{0:.3f}",item)+",")
-    plotfile.write(str.format("{0:.3f}",o_list[-1]))
-    plotfile.write("\n")
+def print_output(model_dict, output_list, dev_list, defense=None, rd=None,
+                 fsg_flag=None, strat_flag=None, rev=None):
+    """
+    Creates an output file reporting acc. and conf. of attack
+    """
+    plotfile = file_create(model_dict, defense, fsg_flag, strat_flag, rev)
+    plotfile.write('Reduced dimensions: ' + str(rd) + '\n')
+    plotfile.write('Mag.   True            Predicted       Correct Class\n')
+    for i in range(len(dev_list)):
+        plotfile.write(str.format('{0:<7.3f}', dev_list[i]))
+        for item in output_list[i]:
+            plotfile.write(str.format('{0:<8.3f}', item))
+        plotfile.write("\n")
+    plotfile.close()
 
-def avg_grad_calc(input_var,target_var,test_prediction,X_test,y_test):
-    gradient=grad_fn(input_var, target_var, test_prediction)
-    delta_x=gradient(X_test,y_test)
-    delta_x_abs=np.abs(delta_x)
-    delta_x_avg_abs=np.mean(delta_x_abs,axis=0)
+def avg_grad_calc(input_var, target_var, test_prediction, X_test, y_test):
+    gradient = grad_fn(input_var, target_var, test_prediction)
+    delta_x = gradient(X_test, y_test)
+    delta_x_abs = np.abs(delta_x)
+    delta_x_avg_abs = np.mean(delta_x_abs, axis=0)
     return delta_x_avg_abs
