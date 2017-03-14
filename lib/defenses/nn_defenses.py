@@ -117,18 +117,19 @@ def recons_defense(model_dict, input_var, target_var, test_prediction,
     mag_count = 0
     for dev_mag in dev_list:
         X_adv_dr = pca.transform(adv_x_all[:, :, mag_count])
-        recons_adv = pca.inverse_transform(X_adv_dr).reshape((test_len, 1, 28, 28))
+        recons_adv = pca.inverse_transform(X_adv_dr).reshape((test_len,1,28,28))
         output_list.append(acc_calc_all(recons_adv, y_test, X_test_rev, i_c,
-                                   validator, indexer, predictor, confidence))
+                                     validator, indexer, predictor, confidence))
         mag_count += 1
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, defense='recon', rd=rd, fsg_flag=1)
+    print_output(model_dict, output_list, dev_list, defense='recon', rd=rd,
+                 fsg_flag=1)
 
 #------------------------------------------------------------------------------#
 # Function to implement the re-training defense
-def retrain_defense(model_dict,input_var,target_var,test_prediction,
-        adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val):
-
+def retrain_defense(model_dict, input_var, target_var, test_prediction,
+                    adv_x_all, rd, X_train, y_train, X_test, y_test, X_val,
+                    y_val):
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -141,12 +142,12 @@ def retrain_defense(model_dict,input_var,target_var,test_prediction,
     : param X_test: Test data
     : param y_test: Test data labels
     """
-    plotfile = file_create(model_dict,rd)
 
     input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
 
-    network,model_exist_flag=model_creator(input_var,target_var,model_dict,rd)
+    network, model_exist_flag = model_creator(input_var, target_var, model_dict,
+                                              rd)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -157,32 +158,33 @@ def retrain_defense(model_dict,input_var,target_var,test_prediction,
 
     print("Doing PCA with rd={} over the training data".format(rd))
 
-    X_train_dr,X_test_dr,pca=pca_dr(X_train,X_test,rd)
-    test_len=len(X_test)
-    X_val=X_val.reshape(test_len,784)
-    X_val_dr=pca.transform(X_val).reshape((test_len,1,rd))
+    X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
+    test_len = len(X_test)
+    X_val = X_val.reshape(test_len, 784)
+    X_val_dr = pca.transform(X_val).reshape((test_len, 1, rd))
 
     # Fixing batchsize
-    batchsize=500
-    p_flag=1
+    batchsize = 500
+    p_flag = 1
 
     # Building or loading model depending on existence
-    if model_exist_flag==1:
+    if model_exist_flag == 1:
         # Load the correct model:
-        param_values=model_loader(model_dict,rd)
+        param_values = model_loader(model_dict, rd)
         lasagne.layers.set_all_param_values(network, param_values)
-    elif model_exist_flag==0:
+    elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
-        model_trainer(input_var,target_var,prediction,test_prediction,params,
-                        model_dict,batchsize,X_train_dr,y_train,X_val_dr,y_val)
-        model_saver(network,model_dict,rd)
+        model_trainer(input_var, target_var, prediction, test_prediction,
+                      params, model_dict, batchsize, X_train_dr, y_train,
+                      X_val_dr, y_val)
+        model_saver(network, model_dict, rd)
 
     # Evaluating on retrained inputs
-    test_model_eval(model_dict,input_var,target_var,test_prediction,X_test_dr,
-                                                                    y_test,rd)
+    test_model_eval(model_dict, input_var, target_var, test_prediction,
+                    X_test_dr, y_test, rd)
 
-    mag_count=0
+    mag_count = 0
 
     validator,indexer,predictor,confidence=local_fns(input_var, target_var,
                                                             test_prediction)
@@ -194,5 +196,9 @@ def retrain_defense(model_dict,input_var,target_var,test_prediction,
                             predictor, confidence)
         file_out(o_list, dev_mag, plotfile)
         mag_count=mag_count+1
-    plotfile.close()
+
+
+    # Printing result to file
+    print_output(model_dict, output_list, dev_list, defense='recon', rd=rd,
+                     fsg_flag=1)
 #------------------------------------------------------------------------------#

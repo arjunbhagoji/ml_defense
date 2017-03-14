@@ -19,10 +19,9 @@ from lib.attacks.nn_attacks import *
 from lib.defenses.nn_defenses import *
 
 script_dir = dirname(os.path.abspath(__file__))
-rel_path_v="visual_data/"
-abs_path_v=os.path.join(script_dir,rel_path_v)
-if not os.path.exists(abs_path_v):
-    os.makedirs(abs_path_v)
+rel_path_v = "visual_data/"
+abs_path_v = os.path.join(script_dir, rel_path_v)
+if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
 
 #from lasagne.regularization import l2
 
@@ -31,17 +30,17 @@ def main(argv):
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
-    network,model_exist_flag,model_dict=model_creator(input_var,target_var)
+    network, model_exist_flag, model_dict = model_creator(input_var, target_var)
 
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
 
-    train_len=len(X_train)
-    test_len=len(X_test)
+    train_len = len(X_train)
+    test_len = len(X_test)
 
     # Fixing batchsize
-    batchsize=500
-    p_flag=1
+    batchsize = 500
+    p_flag = 1
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -51,30 +50,28 @@ def main(argv):
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
 
     # Building or loading model depending on existence
-    if model_exist_flag==1:
+    if model_exist_flag == 1:
         # Load the correct model:
-        param_values=model_loader(model_dict)
+        param_values = model_loader(model_dict)
         lasagne.layers.set_all_param_values(network, param_values)
-    elif model_exist_flag==0:
+    elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
-        model_trainer(input_var,target_var,prediction,test_prediction,params,
-                        model_dict,batchsize,X_train,y_train,X_val,y_val)
-        model_saver(network,model_dict)
+        model_trainer(input_var, target_var, prediction, test_prediction,
+                      params, model_dict, batchsize, X_train, y_train, X_val,
+                      y_val)
+        model_saver(network, model_dict)
 
     # Checking performance on test set
-    test_model_eval(model_dict,input_var,target_var,test_prediction,X_test,
-                                                                        y_test)
-
+    test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
+                    y_test)
     # No. of deviations to consider
-    no_of_mags=50
-
+    no_of_mags = 50
     # Reduced dimensions used
-    rd_list=[331,100,50,40,30,20,10]
+    rd_list = [331, 100, 50, 40, 30, 20, 10]
     # rd_list=[50]
-
     # Creating adv. examples
-    adv_x_all=fsg_attack(model_dict,input_var,target_var,
+    adv_x_all = fsg_attack(model_dict, input_var,target_var,
                     test_prediction,no_of_mags,X_test,y_test,p_flag)
     # for i in range(10):
     #     x=adv_x_all[0,:,i].reshape((28,28))

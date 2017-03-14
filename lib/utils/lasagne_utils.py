@@ -119,7 +119,7 @@ def build_hidden_fc_rd(rd,input_var=None,activation='sigmoid', WIDTH=100):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def build_cnn_rd(input_var,rd):
+def build_cnn_rd(input_var, rd):
     # Input layer, as usual:
     network = lasagne.layers.InputLayer(shape=(None, 1, rd),
                                         input_var=input_var)

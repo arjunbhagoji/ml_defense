@@ -88,7 +88,8 @@ def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
     o_list.extend([c_p, conf_p])
     return o_list
 
-def file_create(model_dict, defense=None, fsg_flag=None, strat_flag=None, rev=None):
+def file_create(model_dict, defense=None, fsg_flag=None, strat_flag=None,
+                rev=None):
     """
     Creates and returns a file descriptor, named corresponding to model, rd,
     fsg, strat, and rev
@@ -101,7 +102,8 @@ def file_create(model_dict, defense=None, fsg_flag=None, strat_flag=None, rev=No
         if fsg_flag == None:
             fname = abs_path_o + 'Opt_MNIST_nn_' + str(depth) + '_' + str(width)
         else:
-            fname = abs_path_o + 'FSG_mod_MNIST_nn_' + str(depth) + '_' + str(width)
+            fname = abs_path_o + 'FSG_mod_MNIST_nn_' + str(depth) + '_' + \
+                    str(width)
     # CNN model
     elif model_name == 'cnn':
         if fsg_flag == None: fname = abs_path_o + 'Opt_MNIST_cnn_papernot'

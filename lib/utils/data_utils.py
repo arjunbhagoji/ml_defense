@@ -75,8 +75,17 @@ def load_dataset():
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(args, input_var, target_var, rd=None, rev=None, model_dict=None):
+def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
+
     model_exist_flag = 0
+    # Parse argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', default='mlp', type=str,
+                        help='Specify neural network model')
+    parser.add_argument('-n_epoch', type=int,
+                        help='Specify number of epochs for training')
+    args = parser.parse_args()
+
     if model_dict == None:
         model_dict = {}
         n_epoch = args.n_epoch
@@ -86,26 +95,25 @@ def model_creator(args, input_var, target_var, rd=None, rev=None, model_dict=Non
     #------------------------------- CNN model --------------------------------#
     if model_name == 'cnn':
         if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 25
+        else: num_epochs = 50
         rate = 0.01
         activation = 'relu'
-        model_dict.update({'num_epochs':num_epochs,'rate':rate,
+        model_dict.update({'num_epochs':num_epochs, 'rate':rate,
                            'activation':activation})
+        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
         if rd == None:
             network = build_cnn(input_var)
-            if os.path.exists(abs_path_m + 'model_cnn_9_layers_papernot.npz'):
-               model_exist_flag = 1
+            if os.path.exists(model_path + '.npz'): model_exist_flag = 1
         elif rd != None:
             if rev == None:
                 network = build_cnn_rd(input_var, rd)
-                if os.path.exists(abs_path_m + 'model_cnn_9_layers_papernot_'
-                                  + str(rd) + '_PCA.npz'):
+                if os.path.exists(model_path + '_' + str(rd) + '_PCA.npz'):
                     model_exist_flag = 1
-            if rev != None:
+            elif rev != None:
                 network = build_cnn(input_var)
-                if os.path.exists(abs_path_m + 'model_cnn_9_layers_papernot_'
-                                  + str(rd) + '_PCA_rev.npz'):
+                if os.path.exists(model_path + '_' + str(rd) + '_PCA_rev.npz'):
                     model_exist_flag = 1
+
     #------------------------------- MLP model --------------------------------#
     elif model_name == 'mlp':
         if n_epoch is not None: num_epochs = n_epoch
@@ -116,18 +124,15 @@ def model_creator(args, input_var, target_var, rd=None, rev=None, model_dict=Non
         activation = 'sigmoid'
         model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
                            'width':width, 'activation':activation})
+        model_path = abs_path_m + 'model_FC10_' + str(depth) + '_' + str(width)
         if rd == None:
-            network, layer_1, layer_2 = build_hidden_fc(input_var,activation,
-                                                        width)
-            if os.path.exists(abs_path_m + 'model_FC10_' + str(depth) + '_'
-                              + str(width) + '.npz'):
-                model_exist_flag = 1
+            network, _, _ = build_hidden_fc(input_var, activation, width)
+            if os.path.exists(model_path + '.npz'): model_exist_flag = 1
         elif rd != None:
-            network, layer_1, layer_2 = build_hidden_fc_rd(rd, input_var,
-                                                           activation, width)
-            if os.path.exists(abs_path_m + 'model_FC10_' + str(depth) + '_'
-                              + str(width) + '_' + str(rd) + '_PCA.npz'):
+            network, _, _ = build_hidden_fc_rd(rd, input_var, activation, width)
+            if os.path.exists(model_path + '_' + str(rd) + '_PCA.npz'):
                 model_exist_flag = 1
+
     #------------------------------ Custom model ------------------------------#
     elif model_name == 'custom':
         if n_epoch is not None: num_epochs = n_epoch
@@ -138,18 +143,18 @@ def model_creator(args, input_var, target_var, rd=None, rev=None, model_dict=Non
         drop_hidden = 0.5
         rate = 0.01
         activation = 'sigmoid'
+        model_path = abs_path_m + 'model_FC10_' + str(depth) + '_' + str(width)
         if rd == None:
-            network = build_custom_mlp(input_var,activation, int(depth),
-                                int(width),float(drop_in), float(drop_hidden))
-            if os.path.exists(abs_path_m+'model_FC10_'+str(depth)+'_'+
-                                                    str(width)+'_drop.npz'):
-                model_exist_flag=1
-        elif rd!=None:
-            network = build_custom_mlp_rd(input_var,activation,int(depth),
-                                int(width),float(drop_in),float(drop_hidden))
-            if os.path.exists(abs_path_m+'model_FC10_'+str(depth)+'_'+str(width)
-                                +'_'+str(rd)+'_PCA_drop.npz'):
-                model_exist_flag=1
+            network = build_custom_mlp(input_var, activation, int(depth),
+                                       int(width), float(drop_in),
+                                       float(drop_hidden))
+            if os.path.exists(model_path + '_drop.npz'): model_exist_flag = 1
+        elif rd != None:
+            network = build_custom_mlp_rd(input_var, activation, int(depth),
+                                          int(width), float(drop_in),
+                                          float(drop_hidden))
+            if os.path.exists(model_path + '_' + str(rd) + '_PCA_drop.npz'):
+                model_exist_flag = 1
 
     return network, model_exist_flag, model_dict
 #------------------------------------------------------------------------------#
