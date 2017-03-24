@@ -99,21 +99,17 @@ def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def file_create(model_dict, defense=None, rev=None, fsg_flag=None,
-                strat_flag=None):
+def file_create(model_dict, fsg_flag, defense=None, rev=None, strat_flag=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type (fsg_flag), strat, and rev
     """
     # Resolve absolute path to output directory
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_o = 'output_data/' + model_dict['dataset'] + '/'
-    abs_path_o = os.path.join(script_dir, rel_path_o)
-    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
+    abs_path_o = resolve_path_o(model_dict)
 
-    model_name=model_dict['model_name']
-    if fsg_flag == None: fname = 'Opt'
-    else: fname = 'FSG'
+    model_name = model_dict['model_name']
+    if fsg_flag == 1: fname = 'FSG'
+    else: fname = 'Opt'
     # MLP model
     if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
@@ -131,12 +127,12 @@ def file_create(model_dict, defense=None, rev=None, fsg_flag=None,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def print_output(model_dict, output_list, dev_list, defense=None, rd=None,
-                 rev=None, fsg_flag=None, strat_flag=None):
+def print_output(model_dict, output_list, dev_list, fsg_flag, defense=None,
+                 rd=None, rev=None, strat_flag=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
-    plotfile = file_create(model_dict, defense, rev, fsg_flag, strat_flag)
+    plotfile = file_create(model_dict, fsg_flag, defense, rev, strat_flag)
     plotfile.write('Reduced dimensions: {}\n'.format(rd))
     plotfile.write('Mag.   True            Predicted       Correct Class\n')
     for i in range(len(dev_list)):

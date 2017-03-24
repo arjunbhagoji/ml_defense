@@ -6,6 +6,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 import scipy
+import scipy.misc
 
 from ..utils.theano_utils import *
 from ..utils.attack_utils import *
@@ -20,7 +21,22 @@ def fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     delta_x = gradient(x_curr, y_curr)
     # Sign of gradient
     delta_x_sign = np.sign(delta_x)
-    adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
+    # TODO: adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
+    if rd == None or rev != None:
+        n_features = x_curr.shape[2]*x_curr.shape[3]
+        delta_x_norm = np.linalg.norm(delta_x_sign.reshape(batch_len,
+                                      n_features), axis=1)
+    elif rd != None and rev == None:
+        delta_x_norm = np.linalg.norm(delta_x_sign.reshape(batch_len, rd),
+                                      axis=1)
+
+    # Perturbed images
+    for i in range(batch_len):
+        if delta_x_norm[i] == 0.0:
+            adv_x[b_c*batch_len + i] = x_curr[i]
+        else:
+            adv_x[b_c*batch_len + i] = (x_curr[i] + dev_mag
+                                        *(delta_x_sign[i]/delta_x_norm[i]))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -29,7 +45,9 @@ def fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     delta_x = gradient(x_curr, y_curr)
     # Calulating norm of gradient
     if rd == None or rev != None:
-        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, 784), axis=1)
+        n_features = x_curr.shape[2]*x_curr.shape[3]
+        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, n_features),
+                                      axis=1)
     elif rd != None and rev == None:
         delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, rd), axis=1)
 
@@ -38,14 +56,28 @@ def fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
         if delta_x_norm[i] == 0.0:
             adv_x[b_c*batch_len + i] = x_curr[i]
         else:
-            adv_x[b_c*batch_len + i] = (x_curr[i]
-                                        + dev_mag*(delta_x[i]/delta_x_norm[i]))
+            adv_x[b_c*batch_len + i] = (x_curr[i] + dev_mag
+                                        *(delta_x[i]/delta_x_norm[i]))
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+# Saves first 10 images from the test set and their adv. samples
+def save_images(X_test, adv_x, dev_mag, fsg_flag):
+    indices = range(10)
+    if fsg_flag == 1: atk = 'FSG'
+    else: atk = 'FG'
+    for i in indices:
+        adv = adv_x[i, :, :, :].reshape((adv_x.shape[2], adv_x.shape[3]))
+        orig = X_test[i, :, :, :].reshape((X_test.shape[2], X_test.shape[3]))
+        scipy.misc.toimage(adv).save('{}_GTSRB_{}_mag{}.jpg'.format(atk, i,
+                                                                    dev_mag))
+        scipy.misc.toimage(orig).save('{}_GTSRB_{}_orig.jpg'.format(atk, i))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
-def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
-                   y_test, rd=None, rev=None):
+def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
+                   X_test, y_test, fsg_flag, rd=None, rev=None):
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -53,7 +85,7 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     : param input_var: symbolic input variable
     : param target_var: symbolic output variable
     : param test_prediction: model output on test data_utils
-    : param no_of_mags: No. of epsilons to consider
+    : param dev_list: list of deviations (mags)
     : param X_test: Test data
     : param y_test: Test data labels
 
@@ -66,16 +98,14 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     height = X_test.shape[2]
     width = X_test.shape[3]
     n_features = height*width
+    n_mags = len(dev_list)
 
     if rd == None or rev != None:
-        adv_x_all = np.zeros((test_len, n_features, no_of_mags))
-    elif rd != None or rev == None:
-        adv_x_all = np.zeros((test_len, rd, no_of_mags))
-
-    if rd == None or rev != None:
+        adv_x_all = np.zeros((test_len, n_features, n_mags))
         scales = length_scales(X_test.reshape(test_len, n_features), y_test)
         adv_x = np.zeros((test_len, 1, height, width))
-    elif rd != None and rev == None:
+    elif rd != None or rev == None:
+        adv_x_all = np.zeros((test_len, rd, n_mags))
         scales = length_scales(X_test.reshape(test_len, rd), y_test)
         adv_x = np.zeros((test_len, 1, rd))
 
@@ -84,12 +114,9 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     indices_c = indexer(X_test, y_test)
     i_c = np.where(indices_c == 1)[0]
 
-    dev_list = np.linspace(0.01, 0.1, no_of_mags)
-
     gradient = grad_fn(input_var, target_var, test_prediction)
 
     o_list = []
-
     mag_count = 0
     for dev_mag in dev_list:
         # start_time=time.time()
@@ -98,9 +125,12 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
         for batch in iterate_minibatches(X_test, y_test, batch_len,
                                          shuffle=False):
             x_curr, y_curr = batch
-            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd,
-                rev)
-            # fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
+            if fsg_flag == 1:
+                fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient,
+                    rd, rev)
+            else:
+                fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd,
+                   rev)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
@@ -111,8 +141,12 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
         elif rd != None and rev == None:
             adv_x_all[:, :, mag_count] = adv_x.reshape((test_len, rd))
         mag_count += 1
+        # Save adv. samples to images
+        save_images(X_test, adv_x, dev_mag, fsg_flag)
 
-    return adv_x_all, o_list, dev_list
+    # Write attack result to file
+    print_output(model_dict, o_list, dev_list, fsg_flag)
+    return adv_x_all
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#

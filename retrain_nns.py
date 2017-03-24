@@ -26,6 +26,9 @@ if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
 #from lasagne.regularization import l2
 
 def main(argv):
+
+    fsg_flag = 0
+
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
@@ -33,14 +36,13 @@ def main(argv):
     network, model_exist_flag, model_dict = model_creator(input_var, target_var)
 
     print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
     train_len = len(X_train)
     test_len = len(X_test)
 
     # Fixing batchsize
     batchsize = 500
-    p_flag = 1
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -66,20 +68,24 @@ def main(argv):
     test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
                     y_test)
     # No. of deviations to consider
-    no_of_mags = 50
+    no_of_mags = 10
     # Reduced dimensions used
     rd_list = [331, 100, 50, 40, 30, 20, 10]
-    # rd_list=[50]
     # Creating adv. examples
-    adv_x_all = fsg_attack(model_dict, input_var,target_var,
-                    test_prediction,no_of_mags,X_test,y_test,p_flag)
+    adv_x_all, output_list, dev_list = attack_wrapper(input_var, target_var,
+                                       test_prediction, no_of_mags, X_test,
+                                       y_test, fsg_flag=fsg_flag)
+    # Write attack result to file
+    print_output(model_dict, output_list, dev_list, fsg_flag=fsg_flag)
+
     # for i in range(10):
     #     x=adv_x_all[0,:,i].reshape((28,28))
     #     plt.imsave(abs_path_v+'mnist_'+str(i)+'.png',x*255, cmap='gray',
     #                 vmin=0, vmax=255)
-    # for rd in rd_list:
-    #     retrain_defense(model_dict,input_var,target_var,test_prediction,
-    #                     adv_x_all,rd,X_train,y_train,X_test,y_test,X_val,y_val)
+    for rd in rd_list:
+        retrain_defense(model_dict, input_var, target_var, test_prediction,
+                        adv_x_all, rd, X_train, y_train, X_test, y_test, X_val,
+                        y_val)
 
 if __name__ == "__main__":
    main(sys.argv[1:])

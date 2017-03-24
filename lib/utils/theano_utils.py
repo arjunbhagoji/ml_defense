@@ -24,7 +24,7 @@ def resolve_path_o(model_dict):
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_o = 'models/' + dataset
+    rel_path_o = 'output_data/' + dataset
     if dataset == 'GTSRB': rel_path_o += str(channels)
     abs_path_o = os.path.join(script_dir, rel_path_o + '/')
     if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)

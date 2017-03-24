@@ -42,8 +42,8 @@ def pca_dr(X_train, X_test, rd, recons_flag=None):
 
 #------------------------------------------------------------------------------#
 # Function to implement the reconstruction defense
-def recons_defense(model_dict, input_var, target_var, test_prediction,
-                   adv_x_all, rd, X_train, y_train, X_test, y_test):
+def recons_defense(model_dict, input_var, target_var, test_prediction, dev_list,
+                   adv_x_all, rd, X_train, y_train, X_test, y_test, fsg_flag):
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -74,7 +74,6 @@ def recons_defense(model_dict, input_var, target_var, test_prediction,
     indices_c = indexer(X_test_rev, y_test)
     i_c = np.where(indices_c == 1)[0]
 
-    dev_list = np.linspace(0.01, 0.1, 10)
     output_list = []
     mag_count = 0
     for dev_mag in dev_list:
@@ -85,8 +84,8 @@ def recons_defense(model_dict, input_var, target_var, test_prediction,
                                      validator, indexer, predictor, confidence))
         mag_count += 1
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, defense='recons', rd=rd,
-                 fsg_flag=1)
+    print_output(model_dict, output_list, dev_list, fsg_flag, defense='recons',
+                 rd=rd)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -107,6 +106,10 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     : param y_test: Test data labels
     """
 
+    height = X_train.shape[2]
+    width = X_train.shape[3]
+    n_features = height*width
+
     input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
 
@@ -124,7 +127,8 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
 
     X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
     test_len = len(X_test)
-    X_val = X_val.reshape(test_len, 784)
+    # TODO: support 3 channels
+    X_val = X_val.reshape(test_len, n_features)
     X_val_dr = pca.transform(X_val).reshape((test_len, 1, rd))
 
     # Fixing batchsize
