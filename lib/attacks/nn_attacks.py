@@ -14,13 +14,16 @@ script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
 rel_path_o = "output_data/"
 abs_path_o = os.path.join(script_dir, rel_path_o)
 
+#------------------------------------------------------------------------------#
 def fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
     # Sign of gradient
     delta_x_sign = np.sign(delta_x)
     adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 def fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
@@ -37,7 +40,9 @@ def fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev):
         else:
             adv_x[b_c*batch_len + i] = (x_curr[i]
                                         + dev_mag*(delta_x[i]/delta_x_norm[i]))
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
 def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
                    y_test, rd=None, rev=None):
@@ -57,19 +62,19 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     : return dev_list: list of used epsilons
     """
 
-    # X_test=X_test
-    # y_test=y_test[0:5000]
-
     test_len = len(X_test)
+    height = X_test.shape[2]
+    width = X_test.shape[3]
+    n_features = height*width
 
     if rd == None or rev != None:
-        adv_x_all = np.zeros((test_len, 784, no_of_mags))
+        adv_x_all = np.zeros((test_len, n_features, no_of_mags))
     elif rd != None or rev == None:
         adv_x_all = np.zeros((test_len, rd, no_of_mags))
 
     if rd == None or rev != None:
-        scales = length_scales(X_test.reshape(test_len, 784), y_test)
-        adv_x = np.zeros((test_len, 1, 28, 28))
+        scales = length_scales(X_test.reshape(test_len, n_features), y_test)
+        adv_x = np.zeros((test_len, 1, height, width))
     elif rd != None and rev == None:
         scales = length_scales(X_test.reshape(test_len, rd), y_test)
         adv_x = np.zeros((test_len, 1, rd))
@@ -79,7 +84,7 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
     indices_c = indexer(X_test, y_test)
     i_c = np.where(indices_c == 1)[0]
 
-    dev_list = np.linspace(0.1, 5.0, no_of_mags)
+    dev_list = np.linspace(0.01, 0.1, no_of_mags)
 
     gradient = grad_fn(input_var, target_var, test_prediction)
 
@@ -90,9 +95,11 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
         # start_time=time.time()
         batch_len = 1000
         b_c = 0
-        for batch in iterate_minibatches(X_test, y_test, batch_len, shuffle=False):
+        for batch in iterate_minibatches(X_test, y_test, batch_len,
+                                         shuffle=False):
             x_curr, y_curr = batch
-            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
+            fsg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd,
+                rev)
             # fg(x_curr, y_curr, adv_x, dev_mag, batch_len, b_c, gradient, rd, rev)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
@@ -100,15 +107,17 @@ def attack_wrapper(input_var, target_var, test_prediction, no_of_mags, X_test,
                                    indexer, predictor, confidence))
         # Saving adversarial examples
         if rd == None or rev != None:
-            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, 784))
+            adv_x_all[:, :, mag_count] = adv_x.reshape((test_len, n_features))
         elif rd != None and rev == None:
-            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, rd))
+            adv_x_all[:, :, mag_count] = adv_x.reshape((test_len, rd))
         mag_count += 1
 
     return adv_x_all, o_list, dev_list
+#------------------------------------------------------------------------------#
 
-def l_bfgs_attack(input_var,target_var,test_prediction,
-                    X_test,y_test,rd=None,max_dev=None):
+#------------------------------------------------------------------------------#
+def l_bfgs_attack(input_var, target_var, test_prediction, X_test, y_test,
+                  rd=None, max_dev=None):
     # C_list=[0.7]
     C=0.7
     bfgs_iter=None

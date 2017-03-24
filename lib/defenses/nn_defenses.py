@@ -11,59 +11,16 @@ from ..utils.lasagne_utils import *
 from ..utils.data_utils import *
 from ..utils.attack_utils import *
 
-script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-rel_path_o = "output_data/"
-abs_path_o = os.path.join(script_dir, rel_path_o)
-
-
-# def local_fns(input_var, target_var, test_prediction):
-#     predictor = predict_fn(input_var, test_prediction)
-#     confidence = conf_fn(input_var, test_prediction)
-#     gradient = grad_fn(input_var, target_var, test_prediction)
-#     test_loss = loss_fn(test_prediction, target_var)
-#     test_acc = acc_fn(test_prediction, target_var)
-#     validator = val_fn(input_var, target_var, test_loss, test_acc)
-#     indexer = index_fn(test_prediction, input_var, target_var)
-#     return validator, indexer, predictor, confidence
-#
-# def acc_calc(X_adv, y, validator, indexer, confidence):
-#     loss_i, acc_i = validator(X_adv, y)
-#     c_i = 100 - acc_i*100
-#     indices_i = indexer(X_adv, y)
-#     i_i = np.where(indices_i == 0)[0]
-#     conf_i = np.float64(confidence(X_adv[i_i]))
-#     return [c_i, conf_i]
-
-# def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
-#                  confidence):
-#     o_list = []
-#     # Accuracy vs. true labels. Confidence on mismatched predictions
-#     c_w,conf_w = acc_calc(X_adv, y_test, validator, indexer, confidence)
-#     o_list.extend([c_w, conf_w])
-#     #Accuracy vs. predicted labels
-#     c_a, conf_a = acc_calc(X_adv, predictor(X_test_mod), validator, indexer,
-#                            confidence)
-#     o_list.extend([c_a, conf_a])
-#     # Accuracy for adv. examples generated from correctly classified
-#     # examples
-#     c_p, conf_p = acc_calc(X_adv[i_c], y_test[i_c], validator, indexer,
-#                            confidence)
-#     o_list.extend([c_p, conf_p])
-#     return o_list
-
-# def file_out(o_list, dev_mag, plotfile):
-#     plotfile.write(str(dev_mag)+",")
-#     for item in o_list[0:-1]:
-#         plotfile.write(str.format("{0:.3f}",item)+",")
-#     plotfile.write(str.format("{0:.3f}",o_list[-1]))
-#     plotfile.write("\n")
-
+#------------------------------------------------------------------------------#
 def pca_dr(X_train, X_test, rd, recons_flag=None):
     train_len = len(X_train)
     test_len = len(X_test)
+    height = X_train.shape[2]
+    width = X_train.shape[3]
+    n_features = height*width
     # Reshaping for PCA function
-    PCA_in_train = X_train.reshape(train_len, 784)
-    PCA_in_test = X_test.reshape(test_len, 784)
+    PCA_in_train = X_train.reshape(train_len, n_features)
+    PCA_in_test = X_test.reshape(test_len, n_features)
     # Fitting the PCA model on training data
     pca = PCA(n_components=rd)
     pca_train = pca.fit(PCA_in_train)
@@ -73,15 +30,17 @@ def pca_dr(X_train, X_test, rd, recons_flag=None):
 
     if recons_flag != None:
         X_train_rev = pca.inverse_transform(X_train_dr)
-        X_train_rev = X_train_rev.reshape((train_len, 1, 28, 28))
+        X_train_rev = X_train_rev.reshape((train_len, 1, height, width))
         X_test_rev = pca.inverse_transform(X_test_dr)
-        X_test_rev = X_test_rev.reshape((test_len, 1, 28, 28))
+        X_test_rev = X_test_rev.reshape((test_len, 1, height, width))
         return X_test_rev, pca
     elif recons_flag == None:
         X_train_dr = X_train_dr.reshape((train_len, 1, rd))
         X_test_dr = X_test_dr.reshape((test_len, 1, rd))
         return X_train_dr, X_test_dr, pca
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 # Function to implement the reconstruction defense
 def recons_defense(model_dict, input_var, target_var, test_prediction,
                    adv_x_all, rd, X_train, y_train, X_test, y_test):
@@ -99,6 +58,9 @@ def recons_defense(model_dict, input_var, target_var, test_prediction,
     """
     recons_flag = 1
     test_len = len(X_test)
+    height = X_train.shape[2]
+    width = X_train.shape[3]
+    n_features = height*width
 
     print("Doing PCA with rd={} over the training data".format(rd))
 
@@ -117,13 +79,15 @@ def recons_defense(model_dict, input_var, target_var, test_prediction,
     mag_count = 0
     for dev_mag in dev_list:
         X_adv_dr = pca.transform(adv_x_all[:, :, mag_count])
-        recons_adv = pca.inverse_transform(X_adv_dr).reshape((test_len,1,28,28))
+        recons_adv = pca.inverse_transform(X_adv_dr).reshape((test_len, 1,
+                                                              height, width))
         output_list.append(acc_calc_all(recons_adv, y_test, X_test_rev, i_c,
                                      validator, indexer, predictor, confidence))
         mag_count += 1
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, defense='recon', rd=rd,
+    print_output(model_dict, output_list, dev_list, defense='recons', rd=rd,
                  fsg_flag=1)
+#------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to implement the re-training defense
@@ -196,7 +160,6 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
                             predictor, confidence)
         file_out(o_list, dev_mag, plotfile)
         mag_count=mag_count+1
-
 
     # Printing result to file
     print_output(model_dict, output_list, dev_list, defense='recon', rd=rd,

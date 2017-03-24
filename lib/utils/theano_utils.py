@@ -7,9 +7,29 @@ from os.path import dirname
 
 import lasagne
 
-script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-rel_path_o = "output_data/"
-abs_path_o = os.path.join(script_dir,rel_path_o)
+#------------------------------------------------------------------------------#
+def resolve_path_o(model_dict):
+    """
+    Resolve absolute paths of output data for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to output directory
+    """
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_o = 'models/' + dataset
+    if dataset == 'GTSRB': rel_path_o += str(channels)
+    abs_path_o = os.path.join(script_dir, rel_path_o + '/')
+    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
+    return abs_path_o
+#------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to predict network output
@@ -29,7 +49,6 @@ def grad_fn(input_var, target_var, test_prediction):
     return theano.function([input_var, target_var], req_gradient,
                            allow_input_downcast=True)
 #------------------------------------------------------------------------------#
-
 
 #------------------------------------------------------------------------------#
 # Function to go over minibatches required for training
@@ -67,10 +86,12 @@ def acc_fn(model_predict, target_var):
                        dtype=theano.config.floatX)
 #------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 def index_fn(model_predict, input_var, target_var):
     index_temp = T.eq(T.argmax(model_predict, axis=1), target_var)
     return theano.function([input_var,target_var], index_temp,
                            allow_input_downcast=True)
+#------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 def val_fn(input_var, target_var, test_loss, test_acc):
@@ -145,6 +166,7 @@ def model_trainer(input_var, target_var, prediction, test_prediction, params,
 #------------------------------------------------------------------------------#
 def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
                     y_test, rd=None, rev=None):
+
     test_loss = loss_fn(test_prediction, target_var)
     test_acc = acc_fn(test_prediction, target_var)
     validator = val_fn(input_var, target_var, test_loss, test_acc)
@@ -172,31 +194,20 @@ def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
     test_conf = test_conf/test_batches
 
     model_name = model_dict['model_name']
-
-    if not os.path.exists(abs_path_o):
-        os.makedirs(abs_path_o)
-
     if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
         width = model_dict['width']
-        plotfile = open(abs_path_o + 'Utility_MNIST_nn_' + str(depth) + '_'
-                        + str(width) + '.txt', 'a')
-        if rd == None:
-            plotfile.write('no_dr,' + str.format("{0:.3f}", test_acc) + ','
-                           + str.format("{0:.3f}", test_conf) + '\n')
-        elif rd != None:
-            plotfile.write(str(rd) + ',' + str.format("{0:.3f}", test_acc) + ','
-                           + str.format("{0:.3f}", test_conf) + '\n')
+        fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
     elif model_name == 'cnn':
-        plotfile = open(abs_path_o + 'MNIST_cnn_papernot.txt', 'a')
-        if rd == None:
-            plotfile.write('no_dr,' + str.format("{0:.3f}", test_acc) + ','
-                           + str.format("{0:.3f}", test_conf) + '\n')
-        elif rd != None:
-            if rev == None:
-                plotfile.write(str(rd) + ',' + str.format("{0:.3f}", test_acc)
-                               + ',' + str.format("{0:.3f}", test_conf) + '\n')
-            if rev != None:
-                plotfile.write(str(rd) + '_rev,' + str.format("{0:.3f}", test_acc)
-                               + ',' + str.format("{0:.3f}", test_conf) + '\n')
+        fname = 'Utility_cnn_papernot.txt'
+
+    abs_path_o = resolve_path_o(model_dict)
+    ofile = open(abs_path_o + fname, 'a')
+    if rd == None:
+        ofile.write('No DR:\t')
+    else:
+        if rev == None: ofile.write('DR {}:\t'.format(rd))
+        else: ofile.write('DR_rev {}:\t'.format(rd))
+    ofile.write('{0:.3f}, {0:.3f}\n'.format(test_acc, test_conf))
+    ofile.close()
 #------------------------------------------------------------------------------#

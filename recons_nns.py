@@ -31,7 +31,7 @@ def main(argv):
     network, model_exist_flag, model_dict = model_creator(input_var, target_var)
 
     print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
     train_len = len(X_train)
     test_len = len(X_test)
@@ -77,7 +77,7 @@ def main(argv):
     # Run reconstruction defense
     for rd in rd_list:
         recons_defense(model_dict, input_var, target_var, test_prediction,
-                       adv_x_all, rd, X_train, y_train, X_test, y_test)
+                      adv_x_all, rd, X_train, y_train, X_test, y_test)
 
     # pool=multiprocessing.Pool(processes=8)
     # pool.map(pca_attack,rd_list)
