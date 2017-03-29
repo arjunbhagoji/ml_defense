@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.misc import imsave
 
 from ..utils.theano_utils import *
 from ..utils.lasagne_utils import *
@@ -99,17 +100,25 @@ def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def file_create(model_dict, fsg_flag, defense=None, rev=None, strat_flag=None):
+def avg_grad_calc(input_var, target_var, test_prediction, X_test, y_test):
+    gradient = grad_fn(input_var, target_var, test_prediction)
+    delta_x = gradient(X_test, y_test)
+    delta_x_abs = np.abs(delta_x)
+    delta_x_avg_abs = np.mean(delta_x_abs, axis=0)
+    return delta_x_avg_abs
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def file_create(model_dict, is_defense, rev=None, strat_flag=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
-    attack type (fsg_flag), strat, and rev
+    attack type, strat, and rev
     """
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
 
     model_name = model_dict['model_name']
-    if fsg_flag == 1: fname = 'FSG'
-    else: fname = 'Opt'
+    fname = model_dict['attack']
     # MLP model
     if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
@@ -121,18 +130,18 @@ def file_create(model_dict, fsg_flag, defense=None, rev=None, strat_flag=None):
 
     if strat_flag != None: fname += '_strat'
     if rev != None: fname += '_rev'
-    if defense != None: fname += ('_' + defense)
+    if is_defense: fname += ('_' + model_dict['defense'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def print_output(model_dict, output_list, dev_list, fsg_flag, defense=None,
-                 rd=None, rev=None, strat_flag=None):
+def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
+                 rev=None, strat_flag=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
-    plotfile = file_create(model_dict, fsg_flag, defense, rev, strat_flag)
+    plotfile = file_create(model_dict, is_defense, rev, strat_flag)
     plotfile.write('Reduced dimensions: {}\n'.format(rd))
     plotfile.write('Mag.   True            Predicted       Correct Class\n')
     for i in range(len(dev_list)):
@@ -144,9 +153,21 @@ def print_output(model_dict, output_list, dev_list, fsg_flag, defense=None,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def avg_grad_calc(input_var, target_var, test_prediction, X_test, y_test):
-    gradient = grad_fn(input_var, target_var, test_prediction)
-    delta_x = gradient(X_test, y_test)
-    delta_x_abs = np.abs(delta_x)
-    delta_x_avg_abs = np.mean(delta_x_abs, axis=0)
-    return delta_x_avg_abs
+# Saves first 10 images from the test set and their adv. samples
+def save_images(model_dict, X_test, adv_x, dev_mag):
+    indices = range(10)
+    channels = X_test.shape[1]
+    height = X_test.shape[2]
+    width = X_test.shape[3]
+    atk = model_dict['attack']
+    dataset = model_dict['dataset']
+    for i in indices:
+        if channels == 1:
+            adv = adv_x[i].reshape((height, width))
+            orig = X_test[i].reshape((height, width))
+        else:
+            adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
+            orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
+        imsave('{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, dev_mag), adv)
+        imsave('{}_{}_{}_orig.jpg'.format(atk, dataset, i), orig)
+#------------------------------------------------------------------------------#

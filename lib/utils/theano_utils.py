@@ -208,6 +208,6 @@ def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
     else:
         if rev == None: ofile.write('DR {}:\t'.format(rd))
         else: ofile.write('DR_rev {}:\t'.format(rd))
-    ofile.write('{0:.3f}, {0:.3f}\n'.format(test_acc, test_conf))
+    ofile.write('{:.3f}, {:.3f}\n'.format(test_acc, test_conf))
     ofile.close()
 #------------------------------------------------------------------------------#

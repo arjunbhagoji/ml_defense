@@ -97,25 +97,6 @@ def build_cnn(in_shape, n_out, input_var=None):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Function to create a neural network with 2 hidden layers of configurable width
-# . Returns each hidden layer as well, so regularization can be added
-def build_hidden_fc_rd(in_shape, n_out, rd, input_var=None, activation='sigmoid', WIDTH=100):
-    # Input layer and dropout (with shortcut `dropout` for `DropoutLayer`):
-    in_layer = lasagne.layers.InputLayer(shape=(None, 1, rd),input_var=input_var)
-    # Hidden layers and dropout:
-    if activation=='sigmoid':
-        nonlin = lasagne.nonlinearities.sigmoid
-    elif activation=='relu':
-        nonlin = lasagne.nonlinearities.rectify
-    layer_1 = lasagne.layers.DenseLayer(in_layer, WIDTH, nonlinearity=nonlin)
-    layer_2 = lasagne.layers.DenseLayer(layer_1, WIDTH, nonlinearity=nonlin)
-    # Output layer:
-    softmax = lasagne.nonlinearities.softmax
-    network = lasagne.layers.DenseLayer(layer_2, n_out, nonlinearity=softmax)
-    return network, layer_1, layer_2
-#------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
 def build_cnn_rd(input_var, rd):
     # Input layer, as usual:
     network = lasagne.layers.InputLayer(shape=(None, 1, rd),

@@ -43,7 +43,7 @@ def pca_dr(X_train, X_test, rd, recons_flag=None):
 #------------------------------------------------------------------------------#
 # Function to implement the reconstruction defense
 def recons_defense(model_dict, input_var, target_var, test_prediction, dev_list,
-                   adv_x_all, rd, X_train, y_train, X_test, y_test, fsg_flag):
+                   adv_x_all, rd, X_train, y_train, X_test, y_test):
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -75,24 +75,21 @@ def recons_defense(model_dict, input_var, target_var, test_prediction, dev_list,
     i_c = np.where(indices_c == 1)[0]
 
     output_list = []
-    mag_count = 0
-    for dev_mag in dev_list:
-        X_adv_dr = pca.transform(adv_x_all[:, :, mag_count])
+    for mag_count in range(len(dev_list)):
+        X_adv_dr = pca.transform(adv_x_all[:,:,mag_count])
         recons_adv = pca.inverse_transform(X_adv_dr).reshape((test_len, 1,
                                                               height, width))
         output_list.append(acc_calc_all(recons_adv, y_test, X_test_rev, i_c,
                                      validator, indexer, predictor, confidence))
-        mag_count += 1
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, fsg_flag, defense='recons',
-                 rd=rd)
+    print_output(model_dict, output_list, dev_list, is_defense=True, rd=rd)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to implement the re-training defense
 def retrain_defense(model_dict, input_var, target_var, test_prediction,
-                    adv_x_all, rd, X_train, y_train, X_test, y_test, X_val,
-                    y_val):
+                    dev_list, adv_x_all, rd, X_train, y_train, X_test, y_test,
+                    X_val, y_val):
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -106,6 +103,8 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     : param y_test: Test data labels
     """
 
+    recons_flag = 0
+    test_len = len(X_test)
     height = X_train.shape[2]
     width = X_train.shape[3]
     n_features = height*width
@@ -113,8 +112,8 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
 
-    network, model_exist_flag = model_creator(input_var, target_var, model_dict,
-                                              rd)
+    network, model_exist_flag, _ = model_creator(input_var, target_var, rd=rd,
+                                                 model_dict=model_dict)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -126,14 +125,12 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     print("Doing PCA with rd={} over the training data".format(rd))
 
     X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
-    test_len = len(X_test)
-    # TODO: support 3 channels
-    X_val = X_val.reshape(test_len, n_features)
-    X_val_dr = pca.transform(X_val).reshape((test_len, 1, rd))
+    val_len = len(X_val)
+    X_val = X_val.reshape(val_len, n_features)
+    X_val_dr = pca.transform(X_val).reshape((val_len, 1, rd))
 
     # Fixing batchsize
     batchsize = 500
-    p_flag = 1
 
     # Building or loading model depending on existence
     if model_exist_flag == 1:
@@ -152,20 +149,17 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     test_model_eval(model_dict, input_var, target_var, test_prediction,
                     X_test_dr, y_test, rd)
 
-    mag_count = 0
+    validator, indexer, predictor, confidence = local_fns(input_var, target_var,
+                                                          test_prediction)
+    indices_c = indexer(X_test_dr, y_test)
+    i_c = np.where(indices_c == 1)[0]
 
-    validator,indexer,predictor,confidence=local_fns(input_var, target_var,
-                                                            test_prediction)
-    indices_c=indexer(X_test_dr,y_test)
-    i_c=np.where(indices_c==1)[0]
-    for dev_mag in np.linspace(0.01,0.1,10):
-        X_adv_dr=pca.transform(adv_x_all[:,:,mag_count]).reshape((test_len,1,rd))
-        o_list=acc_calc_all(X_adv_dr, y_test, X_test_dr, i_c, validator, indexer,
-                            predictor, confidence)
-        file_out(o_list, dev_mag, plotfile)
-        mag_count=mag_count+1
-
+    output_list = []
+    for mag_count in range(len(dev_list)):
+        X_adv_dr = pca.transform(adv_x_all[:,:,mag_count]).reshape((test_len,
+                                                                    1, rd))
+        output_list.append(acc_calc_all(X_adv_dr, y_test, X_test_dr, i_c,
+                                     validator, indexer, predictor, confidence))
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, defense='recon', rd=rd,
-                     fsg_flag=1)
+    print_output(model_dict, output_list, dev_list, is_defense=True, rd=rd)
 #------------------------------------------------------------------------------#

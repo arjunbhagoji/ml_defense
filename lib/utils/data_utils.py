@@ -141,7 +141,7 @@ def load_dataset_GTSRB(model_dict):
             # Scale features to be in [0, 1]
             X = (X/255.).astype(np.float32)
             # Rearrange axes to match the desired dimensions
-            X.swapaxes(1, 3).swapaxes(2, 3)
+            X = X.swapaxes(1, 3).swapaxes(2, 3)
         else:
             # Convert to grayscale, e.g. single Y channel
             X = 0.299*X[:,:,:,0] + 0.587*X[:,:,:,1] + 0.114*X[:,:,:,2]
@@ -181,37 +181,55 @@ def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
     model_exist_flag = 0
     # Parse argument
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset', default='MNIST', type=str,
+    parser.add_argument('--dataset', default='MNIST', type=str,
                         help='Specify dataset')
-    parser.add_argument('--channels', default=1, type=int,
+    parser.add_argument('-c', '--channels', default=1, type=int,
                         help='Specify number of input channels')
     parser.add_argument('-m', '--model', default='mlp', type=str,
                         help='Specify neural network model')
     parser.add_argument('-n_epoch', type=int,
                         help='Specify number of epochs for training')
+    parser.add_argument('-a', '--attack', default='fg', type=str,
+                        help='Specify method to create adversarial samples')
+    parser.add_argument('-d', '--defense', default='recons', type=str,
+                        help='Specify defense mechanism')
     args = parser.parse_args()
 
+    n_epoch = None
+    # If model_dict does not exist, create and update model_dict
     if model_dict == None:
         model_dict = {}
         n_epoch = args.n_epoch
         model_dict.update({'dataset':args.dataset})
         model_dict.update({'channels':args.channels})
         model_dict.update({'model_name':args.model})
+        model_dict.update({'attack':args.attack})
+        model_dict.update({'defense':args.defense})
     dataset = model_dict['dataset']
     model_name = model_dict['model_name']
     abs_path_m = resolve_path_m(model_dict)
 
-    if dataset == 'MNIST':
-        in_shape = (None, 1, 28, 28)
-        n_out = 10
-    elif dataset == 'GTSRB':
-        in_shape = (None, model_dict['channels'], 32, 32)
-        n_out = 43
-
-    # TODO: in_shape for rd, rd of 3 channels?
+    # Determine input size
+    if rd == None:
+        if dataset == 'MNIST':
+            in_shape = (None, 1, 28, 28)
+            n_out = 10
+        elif dataset == 'GTSRB':
+            in_shape = (None, model_dict['channels'], 32, 32)
+            n_out = 43
+    else:
+        if dataset == 'MNIST':
+            in_shape = (None, 1, rd)
+            n_out = 10
+        elif dataset == 'GTSRB':
+            in_shape = (None, model_dict['channels'], rd)
+            n_out = 43
 
     #------------------------------- CNN model --------------------------------#
     if model_name == 'cnn':
+        # No dimension reduction on CNN
+        if rd != None:
+            raise ValueError('Cannot reduce dimension on CNN')
         if n_epoch is not None: num_epochs = n_epoch
         else: num_epochs = 50
         rate = 0.01
@@ -219,8 +237,7 @@ def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
         model_dict.update({'num_epochs':num_epochs, 'rate':rate,
                            'activation':activation})
         model_path = abs_path_m + 'model_cnn_9_layers_papernot'
-        if (rd == None) or (rev != None): network = build_cnn(in_shape, n_out, input_var)
-        else: network = build_cnn_rd(in_shape, n_out, input_var, rd)
+        network = build_cnn(in_shape, n_out, input_var)
 
     #------------------------------- MLP model --------------------------------#
     elif model_name == 'mlp':
@@ -233,10 +250,8 @@ def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
         model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
                            'width':width, 'activation':activation})
         model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-        if (rd == None) or (rev != None):
-            network, _, _ = build_hidden_fc(in_shape, n_out, input_var, activation, width)
-        else:
-            network, _, _ = build_hidden_fc_rd(in_shape, n_out, rd, input_var, activation, width)
+        network, _, _ = build_hidden_fc(in_shape, n_out, input_var, activation,
+                                        width)
 
     #------------------------------ Custom model ------------------------------#
     elif model_name == 'custom':
@@ -252,14 +267,9 @@ def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
                            'width':width, 'activation':activation,
                            'drop_in':drop_in, 'drop_hidden':drop_hidden})
         model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-        if (rd == None) or (rev != None):
-            network = build_custom_mlp(in_shape, n_out, input_var, activation, int(depth),
-                                       int(width), float(drop_in),
-                                       float(drop_hidden))
-        else:
-            network = build_custom_mlp_rd(in_shape, n_out, input_var, activation, int(depth),
-                                          int(width), float(drop_in),
-                                          float(drop_hidden))
+        network = build_custom_mlp(in_shape, n_out, input_var, activation,
+                                   int(depth), int(width), float(drop_in),
+                                   float(drop_hidden))
 
     if rd != None: model_path += '_{}_PCA'.format(rd)
     if rev != None: model_path += '_rev'
@@ -289,7 +299,7 @@ def model_loader(model_dict, rd=None, rev=None):
     if rev != None: model_path += '_rev'
     if model_name == 'custom': model_path += '_drop'
     with np.load(model_path + '.npz') as f:
-        param_values = [f['arr_%d' % i] for i in range(len(f.files))]
+        param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
     return param_values
 #------------------------------------------------------------------------------#
 

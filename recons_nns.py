@@ -25,7 +25,6 @@ from lib.defenses.nn_defenses import *
 def main(argv):
 
     # Parameters
-    fsg_flag = 1
     batchsize = 500                             # Fixing batchsize
     no_of_mags = 10                             # No. of deviations to consider
     dev_list = np.linspace(0.01, 0.1, no_of_mags)
@@ -38,7 +37,7 @@ def main(argv):
     # Check if model already exists
     network, model_exist_flag, model_dict = model_creator(input_var, target_var)
 
-    print("Loading data...")
+    print('Loading data...')
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
     # Defining symbolic variable for network output
@@ -54,8 +53,8 @@ def main(argv):
         param_values = model_loader(model_dict)
         lasagne.layers.set_all_param_values(network, param_values)
     elif model_exist_flag == 0:
-        # Launch the training loop.
-        print("Starting training...")
+        # Launch the training loop
+        print('Starting training...')
         model_trainer(input_var, target_var, prediction, test_prediction,
                       params, model_dict, batchsize, X_train, y_train, X_val,
                       y_val)
@@ -66,16 +65,16 @@ def main(argv):
                     y_test)
 
     # Creating adv. examples
+    print('Creating adversarial samples...')
     adv_x_all = attack_wrapper(model_dict, input_var, target_var,
-                               test_prediction, dev_list, X_test, y_test,
-                               fsg_flag)
+                               test_prediction, dev_list, X_test, y_test)
 
     # Run reconstruction defense
     for rd in rd_list:
         recons_defense(model_dict, input_var, target_var, test_prediction,
                        dev_list, adv_x_all, rd, X_train, y_train, X_test,
-                       y_test, fsg_flag)
+                       y_test)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
    main(sys.argv[1:])
