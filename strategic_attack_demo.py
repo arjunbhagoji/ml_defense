@@ -16,18 +16,23 @@ from lib.utils.dr_utils import *
 from lib.attacks.nn_attacks import *
 
 script_dir = dirname(os.path.abspath(__file__))
-rel_path_v="visual_data/"
-abs_path_v=os.path.join(script_dir,rel_path_v)
+rel_path_v = "visual_data/"
+abs_path_v = os.path.join(script_dir,rel_path_v)
 if not os.path.exists(abs_path_v):
     os.makedirs(abs_path_v)
 
 
-def strategic_attack(rd,X_train,y_train,X_test,y_test,X_val,y_val):
+def strategic_attack(rd, X_train, y_train, X_test, y_test, X_val, y_val):
+
+    # Parameters
+    batchsize = 500    # Fixing batchsize
+    no_of_mags = 10
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
-    network,model_exist_flag,model_dict=model_creator(input_var,target_var,rd,rev=1)
+    network, model_exist_flag, model_dict = model_creator(input_var, target_var,
+                                                          rd, rev=1)
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -38,33 +43,28 @@ def strategic_attack(rd,X_train,y_train,X_test,y_test,X_val,y_val):
 
     print("Doing PCA with rd={} over the training data".format(rd))
 
-    train_len=len(X_train)
-    test_len=len(X_test)
+    train_len = len(X_train)
+    test_len = len(X_test)
 
-    X_train_dr,X_test_dr,pca=pca_dr(X_train,X_test,rd)
-    X_train_rev=pca.inverse_transform(X_train_dr).reshape((train_len,1,28,28))
-    X_test_rev=pca.inverse_transform(X_test_dr).reshape((test_len,1,28,28))
-    test_len=len(X_test)
+    X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
+    X_train_rev = pca.inverse_transform(X_train_dr).reshape((train_len,1,28,28))
+    X_test_rev = pca.inverse_transform(X_test_dr).reshape((test_len,1,28,28))
     X_val=X_val.reshape(test_len,784)
     X_val_dr=pca.transform(X_val).reshape((test_len,1,rd))
     X_val_rev=pca.inverse_transform(X_val_dr).reshape((test_len,1,28,28))
 
-    # Fixing batchsize
-    batchsize=500
-    p_flag=1
-    no_of_mags=50
-
     # Building or loading model depending on existence
-    if model_exist_flag==1:
+    if model_exist_flag == 1:
         # Load the correct model:
-        param_values=model_loader(model_dict,rd,rev=1)
+        param_values=model_loader(model_dict, rd, rev=1)
         lasagne.layers.set_all_param_values(network, param_values)
-    elif model_exist_flag==0:
+    elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
-        model_trainer(input_var,target_var,prediction,test_prediction,params,
-                        model_dict,batchsize,X_train_rev,y_train,X_val_rev,y_val)
-        model_saver(network,model_dict,rd,rev=1)
+        model_trainer(input_var, target_var, prediction, test_prediction,
+                      params, model_dict, batchsize, X_train_rev, y_train,
+                      X_val_rev, y_val)
+        model_saver(network, model_dict, rd, rev=1)
 
     # Evaluating on retrained inputs
     test_model_eval(model_dict,input_var,target_var,test_prediction,X_test_rev,

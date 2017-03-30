@@ -13,15 +13,12 @@ from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
 from lib.utils.theano_utils import *
-from lib.utils.data_utils import *
 from lib.utils.lasagne_utils import *
+from lib.utils.data_utils import *
+from lib.utils.attack_utils import *
+from lib.utils.dr_utils import *
 from lib.attacks.nn_attacks import *
 from lib.defenses.nn_defenses import *
-
-script_dir = dirname(os.path.abspath(__file__))
-rel_path_v = "visual_data/"
-abs_path_v = os.path.join(script_dir, rel_path_v)
-if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
 
 #from lasagne.regularization import l2
 
@@ -43,11 +40,11 @@ def main(argv):
     print('Loading data...')
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
-    #Defining symbolic variable for network output
+    # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
-    #Defining symbolic variable for network parameters
+    # Defining symbolic variable for network parameters
     params = lasagne.layers.get_all_params(network, trainable=True)
-    #Defining symbolic variable for network output with dropout disabled
+    # Defining symbolic variable for network output with dropout disabled
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
 
     # Building or loading model depending on existence
@@ -72,11 +69,17 @@ def main(argv):
     adv_x_all = attack_wrapper(model_dict, input_var, target_var,
                                test_prediction, dev_list, X_test, y_test)
 
-    # Run retrain defense
+    # Run defense
+    defense = model_dict['defense']
     for rd in rd_list:
-        retrain_defense(model_dict, input_var, target_var, test_prediction,
-                        adv_x_all, rd, X_train, y_train, X_test, y_test, X_val,
-                        y_val)
+        if defense == 'recons':
+            recons_defense(model_dict, input_var, target_var, test_prediction,
+                           dev_list, adv_x_all, rd, X_train, y_train, X_test,
+                           y_test)
+        elif defense == 'retrain':
+            retrain_defense(model_dict, input_var, target_var, test_prediction,
+                            dev_list, adv_x_all, rd, X_train, y_train, X_test,
+                            y_test, X_val, y_val)
 
 
 if __name__ == '__main__':

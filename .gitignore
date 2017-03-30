@@ -1,10 +1,9 @@
 /input_data
 /output_data
-/Models
 /models
 /temp
-/plots
 /visual_data
 *.pyc
 *.zip
 *.pem
+*.png

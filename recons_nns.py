@@ -24,21 +24,21 @@ from lib.defenses.nn_defenses import *
 
 def main(argv):
 
+    # Parameters
+    batchsize = 500                             # Fixing batchsize
+    no_of_mags = 10                             # No. of deviations to consider
+    dev_list = np.linspace(0.01, 0.1, no_of_mags)
+    rd_list = [331, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
+
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
+    # Check if model already exists
     network, model_exist_flag, model_dict = model_creator(input_var, target_var)
 
-    print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
-
-    train_len = len(X_train)
-    test_len = len(X_test)
-
-    # Fixing batchsize
-    batchsize = 500
-    p_flag = 1
+    print('Loading data...')
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -53,8 +53,8 @@ def main(argv):
         param_values = model_loader(model_dict)
         lasagne.layers.set_all_param_values(network, param_values)
     elif model_exist_flag == 0:
-        # Launch the training loop.
-        print("Starting training...")
+        # Launch the training loop
+        print('Starting training...')
         model_trainer(input_var, target_var, prediction, test_prediction,
                       params, model_dict, batchsize, X_train, y_train, X_val,
                       y_val)
@@ -63,25 +63,18 @@ def main(argv):
     # Checking performance on test set
     test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
                     y_test)
-    # No. of deviations to consider
-    no_of_mags = 10
-    # Reduced dimensions used
-    rd_list = [331, 100, 50, 40, 30, 20, 10]
-    # rd_list=[100]
+
     # Creating adv. examples
-    adv_x_all, output_list, dev_list = attack_wrapper(input_var, target_var,
-                                                test_prediction, no_of_mags,
-                                                X_test, y_test)
-    # Write attack result to file
-    print_output(model_dict, output_list, dev_list, fsg_flag=1)
+    print('Creating adversarial samples...')
+    adv_x_all = attack_wrapper(model_dict, input_var, target_var,
+                               test_prediction, dev_list, X_test, y_test)
+
     # Run reconstruction defense
     for rd in rd_list:
         recons_defense(model_dict, input_var, target_var, test_prediction,
-                       adv_x_all, rd, X_train, y_train, X_test, y_test)
+                       dev_list, adv_x_all, rd, X_train, y_train, X_test,
+                       y_test)
 
-    # pool=multiprocessing.Pool(processes=8)
-    # pool.map(pca_attack,rd_list)
-    # pool.close()
-    # pool.join()
-if __name__ == "__main__":
+
+if __name__ == '__main__':
    main(sys.argv[1:])
