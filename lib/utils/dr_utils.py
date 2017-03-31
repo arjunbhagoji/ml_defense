@@ -7,7 +7,7 @@ def pca_dr(X_train,X_test,rd):
     PCA_in_train=X_train.reshape(train_len,784)
     PCA_in_test=X_test.reshape(test_len,784)
     #Fitting the PCA model on training data
-    pca=PCA(n_components=rd)
+    pca=PCA(n_components=rd,random_state=10)
     pca_train=pca.fit(PCA_in_train)
     # Reconstructing training and test data
     X_train_dr=pca.transform(PCA_in_train)

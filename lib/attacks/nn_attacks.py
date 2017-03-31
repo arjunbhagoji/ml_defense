@@ -9,6 +9,7 @@ import scipy
 
 from ..utils.theano_utils import *
 from ..utils.attack_utils import *
+from ..utils.data_utils import *
 
 script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
 rel_path_o = "output_data/"
@@ -70,10 +71,15 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
     """
 
     test_len = len(X_test)
+    data_dim=X_test.ndim
     channels = X_test.shape[1]
-    height = X_test.shape[2]
-    width = X_test.shape[3]
-    n_features = channels*height*width
+    if data_dim==3:
+        n_features = X_test.shape[2]
+    elif data_dim==4:
+        height = X_test.shape[2]
+        width = X_test.shape[3]
+        n_features = height*weight*channels
+
     n_mags = len(dev_list)
 
     if rd == None or rev != None:
@@ -113,14 +119,10 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
         elif rd != None and rev == None:
             adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, rd))
         mag_count += 1
-        # Save adv. samples to images
-        save_images(model_dict, X_test, adv_x, dev_mag)
         print('Finished adv. samples with magnitude {:.3f}: took {:.3f}s'
               .format(dev_mag, time.time() - start_time))
 
-    # Write attack result to file
-    print_output(model_dict, o_list, dev_list)
-    return adv_x_all
+    return adv_x_all, o_list
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#

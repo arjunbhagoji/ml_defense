@@ -13,6 +13,7 @@ from lib.utils.lasagne_utils import *
 from lib.utils.data_utils import *
 from lib.utils.attack_utils import *
 from lib.utils.dr_utils import *
+from lib.utils.model_utils import *
 from lib.attacks.nn_attacks import *
 
 script_dir = dirname(os.path.abspath(__file__))
@@ -22,17 +23,24 @@ if not os.path.exists(abs_path_v):
     os.makedirs(abs_path_v)
 
 
-def strategic_attack(rd, X_train, y_train, X_test, y_test, X_val, y_val):
+def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
+                        X_val, y_val):
 
     # Parameters
-    batchsize = 500    # Fixing batchsize
-    no_of_mags = 10
+    batchsize = 500                             # Fixing batchsize
+    rev_flag = None
 
-    input_var = T.tensor4('inputs')
+    # Prepare Theano variables for inputs and targets
+    input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
 
-    network, model_exist_flag, model_dict = model_creator(input_var, target_var,
-                                                          rd, rev=1)
+    # Check if model already exists
+    network, model_exist_flag = model_creator(model_dict, input_var, target_var, rd)
+
+    channels = X_test.shape[1]
+    height = X_test.shape[2]
+    width = X_test.shape[3]
+    n_features = channels*height*width
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -47,73 +55,61 @@ def strategic_attack(rd, X_train, y_train, X_test, y_test, X_val, y_val):
     test_len = len(X_test)
 
     X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
-    X_train_rev = pca.inverse_transform(X_train_dr).reshape((train_len,1,28,28))
-    X_test_rev = pca.inverse_transform(X_test_dr).reshape((test_len,1,28,28))
-    X_val=X_val.reshape(test_len,784)
-    X_val_dr=pca.transform(X_val).reshape((test_len,1,rd))
-    X_val_rev=pca.inverse_transform(X_val_dr).reshape((test_len,1,28,28))
+    # X_train_rev = pca.inverse_transform(X_train_dr).reshape((train_len,channels,height,width))
+    # X_test_rev = pca.inverse_transform(X_test_dr).reshape((test_len,channels,height,width))
+    X_val = X_val.reshape(test_len,n_features)
+    X_val_dr = pca.transform(X_val).reshape((test_len,channels,rd))
+    # X_val_rev = pca.inverse_transform(X_val_dr).reshape((test_len,channels,height,width))
 
     # Building or loading model depending on existence
     if model_exist_flag == 1:
         # Load the correct model:
-        param_values=model_loader(model_dict, rd, rev=1)
+        param_values = model_loader(model_dict, rd, rev=rev_flag)
         lasagne.layers.set_all_param_values(network, param_values)
     elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
         model_trainer(input_var, target_var, prediction, test_prediction,
-                      params, model_dict, batchsize, X_train_rev, y_train,
-                      X_val_rev, y_val)
-        model_saver(network, model_dict, rd, rev=1)
+                      params, model_dict, batchsize, X_train_dr, y_train,
+                      X_val_dr, y_val)
+        model_saver(network, model_dict, rd, rev=rev_flag)
 
     # Evaluating on retrained inputs
-    test_model_eval(model_dict,input_var,target_var,test_prediction,X_test_rev,
-                                                                    y_test,rd,rev=1)
+    test_model_eval(model_dict, input_var, target_var, test_prediction,
+                    X_test_dr, y_test, rd, rev=rev_flag)
     print ("Starting attack...")
-    adv_x_all,output_list,dev_list=attack_wrapper(input_var,target_var,test_prediction,
-                        no_of_mags,X_test_rev,y_test,rd,rev=1)
+    adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var, test_prediction,
+                        dev_list, X_test_dr, y_test, rd, rev=rev_flag)
     # dev_list=[2.0]
     # for max_dev in dev_list:
     #     adv_x_all,output_list,deviation_list=l_bfgs_attack(input_var, target_var, test_prediction, X_test_dr,
     #                                 y_test, rd,max_dev)
 
-    plotfile=file_create(model_dict, rd, fsg_flag=1,strat_flag=1,rev=1)
+    # Printing result to file
+    print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,strat_flag=1)
 
-    for i in range(len(dev_list)):
-        o_list=output_list[i]
-        eps=dev_list[i]
-        file_out(o_list,eps,plotfile)
-
-    # for i in range(50):
-    #     x=pca.inverse_transform(adv_x_all[0,:,i])
-    #     x=x.reshape((28,28))
-    #     # print x.shape
-    #     plt.imsave(abs_path_v+'fsg_mod_mnist_'+str(rd)+'_'+str(i)+'_'+str(dev_list[i])+'.png',x*255, cmap='gray',vmin=0, vmax=255)
-
-
-    # return adv_x_all,pca
-    # return pca
+    # Save adv. samples to images
+    dr_alg=pca
+    if model_dict['dim_red']=='PCA' or model_dict['dim_red']==None:
+        save_images(model_dict, n_features, X_test_dr, adv_x_all, dev_list, rd, dr_alg)
 
 
 def main():
 
-    print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    model_dict = model_dict_create()
 
-    rd_list=[200,100,90,80,70,60,50,40,30,20,10]
-    # rd_list=[30]
-    # rd_list=[784,100]
-    # rd_list=[100]
+    rd_list = [200, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
+    no_of_mags = 10                             # No. of deviations to consider
+    dev_list = np.linspace(0.1, 1.0, no_of_mags)
+    print('Loading data...')
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 
-    # hist_data=naive_untargeted_attack(X_test.reshape(10000,784),y_test)
-    # plt.hist(hist_data,bins=100,normed=1, histtype='step',
-    #                        cumulative=True)
-    # plt.show()
     # partial_strategic_attack=partial(strategic_attack,X_train=X_train,y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)
 
     for rd in rd_list:
         # partial_strategic_attack(rd)
-        strategic_attack(rd,X_train,y_train,X_test,y_test,X_val,y_val)
+        strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test,
+                            y_test, X_val, y_val)
 
     # partial_strategic_attack(784)
     # pool=multiprocessing.Pool(processes=8)

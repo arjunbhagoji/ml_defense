@@ -7,29 +7,7 @@ from os.path import dirname
 
 import lasagne
 
-#------------------------------------------------------------------------------#
-def resolve_path_o(model_dict):
-    """
-    Resolve absolute paths of output data for different datasets
-
-    Parameters
-    ----------
-    model_dict : dictionary
-                 contains model's parameters
-
-    Returns
-    -------
-    absolute path to output directory
-    """
-    dataset = model_dict['dataset']
-    channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_o = 'output_data/' + dataset
-    if dataset == 'GTSRB': rel_path_o += str(channels)
-    abs_path_o = os.path.join(script_dir, rel_path_o + '/')
-    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
-    return abs_path_o
-#------------------------------------------------------------------------------#
+from lib.utils.data_utils import *
 
 #------------------------------------------------------------------------------#
 # Function to predict network output
@@ -193,21 +171,5 @@ def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
     test_acc = test_acc/test_batches*100
     test_conf = test_conf/test_batches
 
-    model_name = model_dict['model_name']
-    if model_name in ('mlp', 'custom'):
-        depth = model_dict['depth']
-        width = model_dict['width']
-        fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
-    elif model_name == 'cnn':
-        fname = 'Utility_cnn_papernot.txt'
-
-    abs_path_o = resolve_path_o(model_dict)
-    ofile = open(abs_path_o + fname, 'a')
-    if rd == None:
-        ofile.write('No DR:\t')
-    else:
-        if rev == None: ofile.write('DR {}:\t'.format(rd))
-        else: ofile.write('DR_rev {}:\t'.format(rd))
-    ofile.write('{:.3f}, {:.3f}\n'.format(test_acc, test_conf))
-    ofile.close()
+    utility_write(model_dict,test_acc,test_conf,rd,rev)
 #------------------------------------------------------------------------------#

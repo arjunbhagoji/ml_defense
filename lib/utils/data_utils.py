@@ -1,8 +1,8 @@
 import sys, os, argparse
 import numpy as np
 import pickle
+from scipy.misc import imsave
 
-from lib.utils.lasagne_utils import *
 from os.path import dirname
 
 #------------------------------------------------------------------------------#
@@ -43,11 +43,59 @@ def resolve_path_m(model_dict):
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_m = 'models/' + dataset
+    rel_path_m = 'nn_models/' + dataset
     if dataset == 'GTSRB': rel_path_m += str(channels)
     abs_path_m = os.path.join(script_dir, rel_path_m + '/')
     if not os.path.exists(abs_path_m): os.makedirs(abs_path_m)
     return abs_path_m
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_o(model_dict):
+    """
+    Resolve absolute paths of output data for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to output directory
+    """
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_o = 'output_data/' + dataset
+    if dataset == 'GTSRB': rel_path_o += str(channels)
+    abs_path_o = os.path.join(script_dir, rel_path_o + '/')
+    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
+    return abs_path_o
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_v(model_dict):
+    """
+    Resolve absolute paths of visual data for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to output directory
+    """
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_v = 'visual_data/' + dataset
+    if dataset == 'GTSRB': rel_path_v += str(channels)
+    abs_path_v = os.path.join(script_dir, rel_path_v + '/')
+    if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
+    return abs_path_v
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -176,152 +224,111 @@ def load_dataset(model_dict):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(input_var, target_var, rd=None, rev=None, model_dict=None):
-
-    model_exist_flag = 0
-    # Parse argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', default='MNIST', type=str,
-                        help='Specify dataset')
-    parser.add_argument('-c', '--channels', default=1, type=int,
-                        help='Specify number of input channels')
-    parser.add_argument('-m', '--model', default='mlp', type=str,
-                        help='Specify neural network model')
-    parser.add_argument('-n_epoch', type=int,
-                        help='Specify number of epochs for training')
-    parser.add_argument('-a', '--attack', default='fg', type=str,
-                        help='Specify method to create adversarial samples')
-    parser.add_argument('-d', '--defense', default='recons', type=str,
-                        help='Specify defense mechanism')
-    args = parser.parse_args()
-
-    n_epoch = None
-    # If model_dict does not exist, create and update model_dict
-    if model_dict == None:
-        model_dict = {}
-        n_epoch = args.n_epoch
-        model_dict.update({'dataset':args.dataset})
-        model_dict.update({'channels':args.channels})
-        model_dict.update({'model_name':args.model})
-        model_dict.update({'attack':args.attack})
-        model_dict.update({'defense':args.defense})
+# Saves first 10 images from the test set and their adv. samples
+def save_images(model_dict, n_features, X_test, adv_x, dev_list, rd=None, dr_alg=None):
+    no_of_img = 10
+    indices = range(no_of_img)
+    X_curr = X_test[indices]
+    channels = X_curr.shape[1]
+    atk = model_dict['attack']
     dataset = model_dict['dataset']
-    model_name = model_dict['model_name']
-    abs_path_m = resolve_path_m(model_dict)
+    DR =model_dict['dim_red']
+    abs_path_v=resolve_path_v(model_dict)
+    if rd!=None:
+        height = int(np.sqrt(n_features))
+        width = height
+        X_curr_rev = dr_alg.inverse_transform(X_curr).reshape((no_of_img, channels, height, width))
+    elif rd==None:
+        height = X_test.shape[2]
+        width = X_test.shape[3]
 
-    # Determine input size
-    if rd == None:
-        if dataset == 'MNIST':
-            in_shape = (None, 1, 28, 28)
-            n_out = 10
-        elif dataset == 'GTSRB':
-            in_shape = (None, model_dict['channels'], 32, 32)
-            n_out = 43
+    if channels == 1:
+        dev_count=0
+        for dev_mag in dev_list:
+            if rd!=None:
+                adv_x_curr=dr_alg.inverse_transform(adv_x[indices,:,dev_count]).reshape((no_of_img, channels, height, width))
+                for i in indices:
+                    adv = adv_x_curr[i].reshape((height, width))
+                    orig = X_curr_rev[i].reshape((height, width))
+                    imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, DR, rd, dev_mag), adv)
+                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i, DR, rd), orig)
+            elif rd == None:
+                adv_x_curr=adv_x[indices,:,dev_count]
+                for i in indices:
+                    adv = adv_x_curr[i].reshape((height,width))
+                    orig = X_curr[i].reshape((height,width))
+                    imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, dev_mag), adv)
+                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i), orig)
     else:
-        if dataset == 'MNIST':
-            in_shape = (None, 1, rd)
-            n_out = 10
-        elif dataset == 'GTSRB':
-            in_shape = (None, model_dict['channels'], rd)
-            n_out = 43
-
-    #------------------------------- CNN model --------------------------------#
-    if model_name == 'cnn':
-        # No dimension reduction on CNN
-        if rd != None:
-            raise ValueError('Cannot reduce dimension on CNN')
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 50
-        rate = 0.01
-        activation = 'relu'
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate,
-                           'activation':activation})
-        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
-        network = build_cnn(in_shape, n_out, input_var)
-
-    #------------------------------- MLP model --------------------------------#
-    elif model_name == 'mlp':
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 500
-        depth = 2
-        width = 100
-        rate = 0.01
-        activation = 'sigmoid'
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'activation':activation})
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-        network, _, _ = build_hidden_fc(in_shape, n_out, input_var, activation,
-                                        width)
-
-    #------------------------------ Custom model ------------------------------#
-    elif model_name == 'custom':
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 500
-        depth = 2
-        width = 100
-        drop_in = 0.2
-        drop_hidden = 0.5
-        rate = 0.01
-        activation = 'sigmoid'
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'activation':activation,
-                           'drop_in':drop_in, 'drop_hidden':drop_hidden})
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-        network = build_custom_mlp(in_shape, n_out, input_var, activation,
-                                   int(depth), int(width), float(drop_in),
-                                   float(drop_hidden))
-
-    if rd != None: model_path += '_{}_PCA'.format(rd)
-    if rev != None: model_path += '_rev'
-    if model_name == 'custom': model_path += '_drop'
-    if os.path.exists(model_path + '.npz'): model_exist_flag = 1
-    return network, model_exist_flag, model_dict
+        adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
+        orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None, rev=None):
+def utility_write(model_dict,test_acc,test_conf,rd,rev):
+    model_name = model_dict['model_name']
+    if model_name in ('mlp', 'custom'):
+        depth = model_dict['depth']
+        width = model_dict['width']
+        fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
+    elif model_name == 'cnn':
+        fname = 'Utility_cnn_papernot.txt'
+
+    abs_path_o = resolve_path_o(model_dict)
+    ofile = open(abs_path_o + fname, 'a')
+    DR=model_dict['dim_red']
+    if rd == None:
+        ofile.write('No_'+DR+':\t')
+    else:
+        if rev == None: ofile.write(DR+'_{}: '.format(rd))
+        else: ofile.write(DR+'_rev {}:\t'.format(rd))
+    ofile.write('{:.3f}, {:.3f}\n'.format(test_acc, test_conf))
+    ofile.close()
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
+    """
+    Creates and returns a file descriptor, named corresponding to model,
+    attack type, strat, and rev
+    """
+    # Resolve absolute path to output directory
+    abs_path_o = resolve_path_o(model_dict)
 
     model_name = model_dict['model_name']
-    abs_path_m = resolve_path_m(model_dict)
-
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
-    elif model_name == 'mlp':
+    DR = model_dict['dim_red']
+    fname = model_dict['attack']
+    # MLP model
+    if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
         width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
+        fname += '_nn_{}_{}'.format(depth, width)
+    # CNN model
+    elif model_name == 'cnn':
+        fname += '_cnn_papernot'
 
-    if rd != None: model_path += '_{}_PCA'.format(rd)
-    if rev != None: model_path += '_rev'
-    if model_name == 'custom': model_path += '_drop'
-    with np.load(model_path + '.npz') as f:
-        param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
-    return param_values
+    if strat_flag != None: fname += '_strat'
+    if rev != None: fname += '_rev'
+    if rd != None: fname += '_'+DR
+    if is_defense: fname += ('_' + model_dict['defense'])
+    plotfile = open(abs_path_o + fname + '.txt', 'a')
+    return plotfile
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_saver(network, model_dict, rd=None, rev=None):
-
-    model_name = model_dict['model_name']
-    abs_path_m = resolve_path_m(model_dict)
-
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
-    elif model_name == 'mlp':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
-
-    if rd != None: model_path += '_{}_PCA'.format(rd)
-    if rev != None: model_path += '_rev'
-    if model_name == 'custom': model_path += '_drop'
-    np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
+def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
+                 rev=None, strat_flag=None):
+    """
+    Creates an output file reporting accuracy and confidence of attack
+    """
+    plotfile = file_create(model_dict, is_defense, rd, rev, strat_flag)
+    plotfile.write('\\\small{{}}\n'.format(rd))
+    # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
+    for i in range(len(dev_list)):
+        plotfile.write('{0:<7.3f}'.format(dev_list[i]))
+        for item in output_list[i]:
+            plotfile.write('{0:<8.3f}'.format(item))
+        plotfile.write("\n")
+    plotfile.close()
 #------------------------------------------------------------------------------#
