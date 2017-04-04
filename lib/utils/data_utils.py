@@ -1,7 +1,9 @@
 import sys, os, argparse
 import numpy as np
 import pickle
-from scipy.misc import imsave
+# from scipy.misc import imsave
+from matplotlib import pyplot as plt
+from matplotlib import image as img
 
 from os.path import dirname
 
@@ -225,8 +227,8 @@ def load_dataset(model_dict):
 
 #------------------------------------------------------------------------------#
 # Saves first 10 images from the test set and their adv. samples
-def save_images(model_dict, n_features, X_test, adv_x, dev_list, rd=None, dr_alg=None):
-    no_of_img = 10
+def save_images(model_dict, n_features, X_test, adv_x, dev_list, rd=None, dr_alg=None, rev=None):
+    no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
     channels = X_curr.shape[1]
@@ -234,31 +236,41 @@ def save_images(model_dict, n_features, X_test, adv_x, dev_list, rd=None, dr_alg
     dataset = model_dict['dataset']
     DR =model_dict['dim_red']
     abs_path_v=resolve_path_v(model_dict)
-    if rd!=None:
+    if rd != None and rev == None:
         height = int(np.sqrt(n_features))
         width = height
         X_curr_rev = dr_alg.inverse_transform(X_curr).reshape((no_of_img, channels, height, width))
-    elif rd==None:
+    elif rd == None or (rd != None and rev != None):
         height = X_test.shape[2]
         width = X_test.shape[3]
 
     if channels == 1:
         dev_count=0
         for dev_mag in dev_list:
-            if rd!=None:
-                adv_x_curr=dr_alg.inverse_transform(adv_x[indices,:,dev_count]).reshape((no_of_img, channels, height, width))
+            if rd != None and rev == None:
+                adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:,dev_count]).reshape((no_of_img, channels, height, width))
+                np.clip(adv_x_curr, 0, 1)
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, DR, rd, dev_mag), adv)
-                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i, DR, rd), orig)
-            elif rd == None:
-                adv_x_curr=adv_x[indices,:,dev_count]
+                    # fig=plt.imshow(adv*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
+                    # plt.savefig(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd, dev_mag))
+                    # fig=plt.imshow(orig*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
+                    # plt.savefig(abs_path_v+'{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd))
+                    img.imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255, cmap='gray')
+                    img.imsave(abs_path_v+'{}_{}_{}_{}_orig.png'.format(dataset, i, DR, rd), adv*255, vmin=0, vmax=255, cmap='gray')
+                    # imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, DR, rd, dev_mag), adv*255)
+                    # imsave(abs_path_v+'{}_{}_{}_{}_orig.jpg'.format(atk, dataset, i, DR, rd), orig*255)
+            elif rd == None or rev != None:
+                adv_x_curr = adv_x[indices,:,dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height,width))
                     orig = X_curr[i].reshape((height,width))
-                    imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, dev_mag), adv)
-                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i), orig)
+                    # fig=plt.imshow(adv*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
+                    # plt.savefig(abs_path_v+'{}_{}_{}_mag{}.png'.format(atk, dataset, i, dev_mag))
+                    imsave(abs_path_v+'{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, dev_mag), adv*255)
+                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i), orig*255)
+            dev_count += 1
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
@@ -323,12 +335,13 @@ def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
     Creates an output file reporting accuracy and confidence of attack
     """
     plotfile = file_create(model_dict, is_defense, rd, rev, strat_flag)
-    plotfile.write('\\\small{{}}\n'.format(rd))
+    plotfile.write('\\\small{'+str(rd)+'}\n')
     # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
     for i in range(len(dev_list)):
         plotfile.write('{0:<7.3f}'.format(dev_list[i]))
         for item in output_list[i]:
             plotfile.write('{0:<8.3f}'.format(item))
-        plotfile.write("\n")
+        plotfile.write('\n')
+    plotfile.write('\n'+'\n')
     plotfile.close()
 #------------------------------------------------------------------------------#
