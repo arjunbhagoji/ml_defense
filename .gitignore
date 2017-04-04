@@ -1,8 +1,9 @@
 /input_data
 /output_data
-/models
+/nn_models
 /temp
 /visual_data
+/deprecated
 *.pyc
 *.zip
 *.pem

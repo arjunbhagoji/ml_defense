@@ -16,13 +16,16 @@ rel_path_o = "output_data/"
 abs_path_o = os.path.join(script_dir, rel_path_o)
 
 #------------------------------------------------------------------------------#
-def fsg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
+def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
     batch_len = x_curr.shape[0]
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
     # Sign of gradient
     delta_x_sign = np.sign(delta_x)
-    adv_x[b_c*batch_len : (b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
+    if rd == None or rev != None: # Clipping if in pixel space
+        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = np.clip(x_curr + dev_mag*delta_x_sign, 0 , 1)
+    elif rd !=None and rev ==None:
+        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -46,8 +49,11 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
             if delta_x_norm[i, j] == 0.0:
                 adv_x[b_c*batch_len + i, j] = x_curr[i, j]
             else:
-                adv_x[b_c*batch_len + i, j] = (x_curr[i, j] + dev_mag
-                                            *(delta_x[i, j]/delta_x_norm[i, j]))
+                if rd == None or rev != None: # Clipping in pixel space
+                    adv_x[b_c*batch_len + i, j] = np.clip(x_curr[i, j] + dev_mag
+                                    *(delta_x[i, j]/delta_x_norm[i, j]), 0, 1)
+                elif rd != None and rev == None:
+                    adv_x[b_c*batch_len + i, j] = x_curr[i, j] + dev_mag*(delta_x[i, j]/delta_x_norm[i, j])
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -78,16 +84,15 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
     elif data_dim==4:
         height = X_test.shape[2]
         width = X_test.shape[3]
-        n_features = height*weight*channels
+        n_features = height*width*channels
 
     n_mags = len(dev_list)
 
-    if rd == None or rev != None:
+    # Creating array to store adversarial samples
+    if rd == None or (rev != None and rd != None):
         adv_x_all = np.zeros((test_len, n_features, n_mags))
-        adv_x = np.zeros((test_len, channels, height, width))
-    elif rd != None or rev == None:
+    elif rd != None and rev == None:
         adv_x_all = np.zeros((test_len, rd, n_mags))
-        adv_x = np.zeros((test_len, 1, rd))
 
     validator, indexer, predictor, confidence = local_fns(input_var, target_var,
                                                           test_prediction)
@@ -99,14 +104,17 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
     o_list = []
     mag_count = 0
     for dev_mag in dev_list:
+        if rd == None or (rev != None and rd != None):
+            adv_x = np.zeros((test_len, channels, height, width))
+        elif rd != None and rev == None:
+            adv_x = np.zeros((test_len, 1, rd))
         start_time = time.time()
         batch_len = 1000
         b_c = 0
-        for batch in iterate_minibatches(X_test, y_test, batch_len,
-                                         shuffle=False):
+        for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
-            if model_dict['attack'] == 'fsg':
-                fsg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev)
+            if model_dict['attack'] == 'fgs':
+                fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev)
             elif model_dict['attack'] == 'fg':
                 fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev)
             b_c += 1

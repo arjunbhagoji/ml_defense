@@ -17,6 +17,7 @@ from lib.utils.lasagne_utils import *
 from lib.utils.data_utils import *
 from lib.utils.attack_utils import *
 from lib.utils.dr_utils import *
+from lib.utils.model_utils import *
 from lib.attacks.nn_attacks import *
 from lib.defenses.nn_defenses import *
 
@@ -24,10 +25,12 @@ from lib.defenses.nn_defenses import *
 
 def main(argv):
 
+    model_dict = model_dict_create()
+
     # Parameters
     batchsize = 500                             # Fixing batchsize
     no_of_mags = 10                             # No. of deviations to consider
-    dev_list = np.linspace(0.01, 0.1, no_of_mags)
+    dev_list = np.linspace(0.1, 1.0, no_of_mags)
     rd_list = [331, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
 
     # Prepare Theano variables for inputs and targets
@@ -35,10 +38,16 @@ def main(argv):
     target_var = T.ivector('targets')
 
     # Check if model already exists
-    network, model_exist_flag, model_dict = model_creator(input_var, target_var)
+    network, model_exist_flag = model_creator(model_dict, input_var,
+                                                            target_var)
 
     print('Loading data...')
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+
+    channels = X_test.shape[1]
+    height = X_test.shape[2]
+    width = X_test.shape[3]
+    n_features = channels*height*width
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -64,10 +73,12 @@ def main(argv):
     test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
                     y_test)
 
-    # Creating adv. examples
+    # Running attack and saving samples
     print('Creating adversarial samples...')
-    adv_x_all = attack_wrapper(model_dict, input_var, target_var,
+    adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var,
                                test_prediction, dev_list, X_test, y_test)
+    print_output(model_dict, output_list, dev_list)
+    save_images(model_dict, n_features, X_test, adv_x_all, dev_list)
 
     # Run defense
     defense = model_dict['defense']

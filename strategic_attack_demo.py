@@ -35,7 +35,7 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     target_var = T.ivector('targets')
 
     # Check if model already exists
-    network, model_exist_flag = model_creator(model_dict, input_var, target_var, rd)
+    network, model_exist_flag = model_creator(model_dict, input_var, target_var, rd, rev=rev_flag)
 
     channels = X_test.shape[1]
     height = X_test.shape[2]
@@ -55,11 +55,11 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     test_len = len(X_test)
 
     X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
-    # X_train_rev = pca.inverse_transform(X_train_dr).reshape((train_len,channels,height,width))
-    # X_test_rev = pca.inverse_transform(X_test_dr).reshape((test_len,channels,height,width))
+    X_train_rev = pca.inverse_transform(X_train_dr).reshape((train_len,channels,height,width))
+    X_test_rev = pca.inverse_transform(X_test_dr).reshape((test_len,channels,height,width))
     X_val = X_val.reshape(test_len,n_features)
     X_val_dr = pca.transform(X_val).reshape((test_len,channels,rd))
-    # X_val_rev = pca.inverse_transform(X_val_dr).reshape((test_len,channels,height,width))
+    X_val_rev = pca.inverse_transform(X_val_dr).reshape((test_len,channels,height,width))
 
     # Building or loading model depending on existence
     if model_exist_flag == 1:
@@ -80,27 +80,23 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     print ("Starting attack...")
     adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var, test_prediction,
                         dev_list, X_test_dr, y_test, rd, rev=rev_flag)
-    # dev_list=[2.0]
-    # for max_dev in dev_list:
-    #     adv_x_all,output_list,deviation_list=l_bfgs_attack(input_var, target_var, test_prediction, X_test_dr,
-    #                                 y_test, rd,max_dev)
 
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,strat_flag=1)
+    print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd, strat_flag=1)
 
     # Save adv. samples to images
     dr_alg=pca
     if model_dict['dim_red']=='PCA' or model_dict['dim_red']==None:
-        save_images(model_dict, n_features, X_test_dr, adv_x_all, dev_list, rd, dr_alg)
+        save_images(model_dict, n_features, X_test_dr, adv_x_all, dev_list, rd, dr_alg, rev=rev_flag)
 
 
 def main():
 
     model_dict = model_dict_create()
 
-    rd_list = [200, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
-    no_of_mags = 10                             # No. of deviations to consider
-    dev_list = np.linspace(0.1, 1.0, no_of_mags)
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions used
+    no_of_mags = 50                             # No. of deviations to consider
+    dev_list = np.linspace(0.1, 5.0, no_of_mags)
     print('Loading data...')
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
 

@@ -38,7 +38,7 @@ def model_dict_create():
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(model_dict,input_var, target_var, rd=None, rev=None):
+def model_creator(model_dict, input_var, target_var, rd=None, rev=None):
 
     n_epoch = model_dict['num_epochs']
     dataset = model_dict['dataset']
@@ -47,7 +47,7 @@ def model_creator(model_dict,input_var, target_var, rd=None, rev=None):
     abs_path_m = resolve_path_m(model_dict)
 
     # Determine input size
-    if rd == None:
+    if rd == None or rev != None:
         if dataset == 'MNIST':
             in_shape = (None, 1, 28, 28)
             n_out = 10
@@ -64,9 +64,9 @@ def model_creator(model_dict,input_var, target_var, rd=None, rev=None):
 
     #------------------------------- CNN model --------------------------------#
     if model_name == 'cnn':
-        # No dimension reduction on CNN
-        if rd != None:
-            raise ValueError('Cannot reduce dimension on CNN')
+        # # No dimension reduction on CNN
+        # if rd != None:
+        #     raise ValueError('Cannot reduce dimension on CNN')
         if n_epoch is not None: num_epochs = n_epoch
         else: num_epochs = 50
         rate = 0.01
@@ -163,7 +163,7 @@ def model_saver(network, model_dict, rd=None, rev=None):
         width = model_dict['width']
         model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
 
-    if rd != None: model_path += '_{}_'+DR.format(rd)
+    if rd != None: model_path += '_{}_'.format(rd)+DR
     if rev != None: model_path += '_rev'
     if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
