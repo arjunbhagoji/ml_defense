@@ -9,6 +9,11 @@ from os.path import dirname
 
 #------------------------------------------------------------------------------#
 def model_dict_create():
+
+    """
+    Parse arguments and save them in model_dict
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='MNIST', type=str,
                         help='Specify dataset')
@@ -23,7 +28,7 @@ def model_dict_create():
     parser.add_argument('-d', '--defense', default=None, type=str,
                         help='Specify defense mechanism')
     parser.add_argument('-dr', '--dim_red', default='pca', type=str,
-                        help='Specify defense mechanism')
+                        help='Specify dimension reduction scheme')
     args = parser.parse_args()
 
     model_dict = {}
@@ -42,6 +47,11 @@ def model_dict_create():
 
 #------------------------------------------------------------------------------#
 def get_model_name(model_dict, rd=None, rev=None):
+
+    """
+    Resolve a model's name to save/load based on model_dict
+    """
+
     model_name = model_dict['model_name']
     n_out = model_dict['n_out']
     depth = model_dict['depth']
@@ -53,9 +63,7 @@ def get_model_name(model_dict, rd=None, rev=None):
     elif model_name =='cnn':
         m_name='model_cnn{}_{}_{}'.format(n_out, depth, width)
 
-    if rd != None:
-        m_name += '_{}'.format(rd)
-        m_name += '_'+DR
+    if rd != None: m_name += '_{}_{}'.format(rd, DR)
     if rev != None: m_name += '_rev'
     if model_name == 'custom': m_name += '_drop'
 
@@ -64,6 +72,7 @@ def get_model_name(model_dict, rd=None, rev=None):
 
 #------------------------------------------------------------------------------#
 def resolve_path_i(model_dict):
+
     """
     Resolve absolute paths of input data for different datasets
 
@@ -76,6 +85,7 @@ def resolve_path_i(model_dict):
     -------
     absolute path to input data directory
     """
+
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
     rel_path_i = 'input_data/' + model_dict['dataset'] +'/'
     abs_path_i = os.path.join(script_dir, rel_path_i)
@@ -85,6 +95,7 @@ def resolve_path_i(model_dict):
 
 #------------------------------------------------------------------------------#
 def resolve_path_m(model_dict):
+
     """
     Resolve absolute paths of models for different datasets
 
@@ -97,6 +108,7 @@ def resolve_path_m(model_dict):
     -------
     absolute path to models directory
     """
+
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
@@ -109,6 +121,7 @@ def resolve_path_m(model_dict):
 
 #------------------------------------------------------------------------------#
 def resolve_path_o(model_dict):
+
     """
     Resolve absolute paths of output data for different datasets
 
@@ -121,6 +134,7 @@ def resolve_path_o(model_dict):
     -------
     absolute path to output directory
     """
+
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
@@ -133,6 +147,7 @@ def resolve_path_o(model_dict):
 
 #------------------------------------------------------------------------------#
 def resolve_path_v(model_dict):
+
     """
     Resolve absolute paths of visual data for different datasets
 
@@ -143,8 +158,9 @@ def resolve_path_v(model_dict):
 
     Returns
     -------
-    absolute path to output directory
+    absolute path to visual data directory
     """
+
     model_name = get_model_name(model_dict)
     dataset = model_dict['dataset']
     channels = model_dict['channels']
@@ -158,10 +174,12 @@ def resolve_path_v(model_dict):
 
 #------------------------------------------------------------------------------#
 def load_dataset_MNIST(model_dict):
+
     """
     Load MNIST data as a (datasize) x 1 x (height) x (width) numpy matrix.
     Each pixel is rescaled to lie in [0,1].
     """
+
     # We first define a download function, supporting both Python 2 and 3.
     if sys.version_info[0] == 2:
         from urllib import urlretrieve
@@ -218,12 +236,14 @@ def load_dataset_MNIST(model_dict):
 
 #------------------------------------------------------------------------------#
 def load_dataset_GTSRB(model_dict):
+
     """
     Load GTSRB data as a (datasize) x (channels) x (height) x (width) numpy
     matrix. Each pixel is rescaled to lie in [0,1].
     """
 
     def load_pickled_data(file, columns):
+
         """
         Loads pickled training and test data.
 
@@ -238,6 +258,7 @@ def load_dataset_GTSRB(model_dict):
         -------
         A tuple of datasets for given columns.
         """
+
         with open(file, mode='rb') as f:
             dataset = pickle.load(f)
         return tuple(map(lambda c: dataset[c], columns))
@@ -274,6 +295,11 @@ def load_dataset_GTSRB(model_dict):
 
 #------------------------------------------------------------------------------#
 def load_dataset(model_dict):
+
+    """
+    Load and return dataset specified in model_dict
+    """
+
     dataset = model_dict['dataset']
     if dataset == 'MNIST':
         return load_dataset_MNIST(model_dict)
@@ -284,17 +310,29 @@ def load_dataset(model_dict):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def get_data_shape(X_train, X_test, X_val = None):
+def get_data_shape(X_train, X_test, X_val=None):
+
+    """
+    Creates, updates and returns data_dict containing metadata of the dataset
+    """
+
+    # Creates data_dict
     data_dict = {}
+
+    # Updates data_dict with lenght of training, test, validation sets
     train_len = len(X_train)
     test_len = len(X_test)
-    data_dict.update({'train_len':train_len,'test_len':test_len})
+    data_dict.update({'train_len':train_len, 'test_len':test_len})
     if X_val is not None:
         val_len = len(X_val)
         data_dict.update({'val_len':val_len})
     # else : val_len = None
+
+    # Updates number of dimensions of data
     no_of_dim = X_train.ndim
     data_dict.update({'no_of_dim':no_of_dim})
+
+    # Updates number of features(, number of channels, width, height)
     if no_of_dim == 2:
         no_of_features = X_train.shape[1]
         data_dict.update({'no_of_features':no_of_features})
@@ -303,22 +341,22 @@ def get_data_shape(X_train, X_test, X_val = None):
         features_per_c = X_train.shape[2]
         no_of_features = channels*features_per_c
         data_dict.update({'no_of_features':no_of_features,'channels':channels,
-        'features_per_c':features_per_c})
-    elif no_of_dim ==4:
+                          'features_per_c':features_per_c})
+    elif no_of_dim == 4:
         channels = X_train.shape[1]
         height = X_train.shape[2]
         width = X_train.shape[3]
         no_of_features = channels*height*width
         data_dict.update({'height':height, 'width':width, 'channels':channels,
-        'no_of_features':no_of_features})
+                          'no_of_features':no_of_features})
+
     return data_dict
 #------------------------------------------------------------------------------#
-
 
 #------------------------------------------------------------------------------#
 # Saves first 10 images from the test set and their adv. samples
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
-                    dr_alg=None, rev=None):
+                dr_alg=None, rev=None):
     no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
@@ -419,7 +457,7 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 
     if strat_flag != None: fname += '_strat'
     if rev != None: fname += '_rev'
-    if rd != None: fname += '_'+DR
+    if rd != None: fname += '_' + DR
     if is_defense: fname += ('_' + model_dict['defense'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
@@ -428,17 +466,19 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 #------------------------------------------------------------------------------#
 def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
                  rev=None, strat_flag=None):
+
     """
     Creates an output file reporting accuracy and confidence of attack
     """
+
     plotfile = file_create(model_dict, is_defense, rd, rev, strat_flag)
-    plotfile.write('\\\small{'+str(rd)+'}\n')
+    plotfile.write('\\\small{' + str(rd) + '}\n')
     # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
     for i in range(len(dev_list)):
         plotfile.write('{0:<7.3f}'.format(dev_list[i]))
         for item in output_list[i]:
             plotfile.write('{0:<8.3f}'.format(item))
         plotfile.write('\n')
-    plotfile.write('\n'+'\n')
+    plotfile.write('\n\n')
     plotfile.close()
 #------------------------------------------------------------------------------#

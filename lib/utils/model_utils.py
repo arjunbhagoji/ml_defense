@@ -6,7 +6,7 @@ from lib.utils.lasagne_utils import *
 
 #------------------------------------------------------------------------------#
 def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
-                                                                    rev=None):
+                  rev=None):
 
     n_epoch = model_dict['num_epochs']
     dataset = model_dict['dataset']
@@ -133,7 +133,7 @@ def model_saver(network, model_dict, rd=None, rev=None):
         width = model_dict['width']
         model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
 
-    if rd != None: model_path += '_{}_'.format(rd)+DR
+    if rd != None: model_path += '_{}_{}'.format(rd, DR)
     if rev != None: model_path += '_rev'
     if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))

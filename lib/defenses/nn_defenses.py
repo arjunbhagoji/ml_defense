@@ -10,6 +10,7 @@ from ..utils.theano_utils import *
 from ..utils.lasagne_utils import *
 from ..utils.data_utils import *
 from ..utils.attack_utils import *
+from ..utils.model_utils import *
 
 #------------------------------------------------------------------------------#
 def pca_dr(X_train, X_test, rd, recons_flag=None):
@@ -87,9 +88,10 @@ def recons_defense(model_dict, input_var, target_var, test_prediction, dev_list,
 
 #------------------------------------------------------------------------------#
 # Function to implement the re-training defense
-def retrain_defense(model_dict, input_var, target_var, test_prediction,
-                    dev_list, adv_x_all, rd, X_train, y_train, X_test, y_test,
-                    X_val, y_val):
+def retrain_defense(model_dict, data_dict, input_var, target_var,
+                    test_prediction, dev_list, adv_x_all, rd, X_train, y_train,
+                    X_test, y_test, X_val, y_val):
+
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -104,16 +106,27 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     """
 
     recons_flag = 0
-    test_len = len(X_test)
-    height = X_train.shape[2]
-    width = X_train.shape[3]
-    n_features = height*width
+    # TODO: Fixing batchsize
+    batchsize = 500
+    test_len = data_dict['test_len']
+    n_features = data_dict['no_of_features']
+    dim_red = model_dict['dim_red']
 
+    # Doing dimension reduction on the dataset
+    print("Doing {} with rd={} over the dataset".format(dim_red, rd))
+    X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
+    val_len = data_dict['val_len']
+    X_val = X_val.reshape(val_len, n_features)
+    X_val_dr = pca.transform(X_val).reshape((val_len, 1, rd))
+    # Create new data_dict based on dimension reduced data
+    data_dict_dr = get_data_shape(X_train_dr, X_test_dr, X_val_dr)
+
+    # Create new Theano variables for input and output of model
     input_var = T.tensor3('inputs')
     target_var = T.ivector('targets')
-
-    network, model_exist_flag, _ = model_creator(input_var, target_var, rd=rd,
-                                                 model_dict=model_dict)
+    # Create/load model
+    network, model_exist_flag = model_creator(model_dict, data_dict_dr,
+                                              input_var, target_var, rd=rd)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -121,16 +134,6 @@ def retrain_defense(model_dict, input_var, target_var, test_prediction,
     params = lasagne.layers.get_all_params(network, trainable=True)
     # Defining symbolic variable for network output with dropout disabled
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
-
-    print("Doing PCA with rd={} over the training data".format(rd))
-
-    X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
-    val_len = len(X_val)
-    X_val = X_val.reshape(val_len, n_features)
-    X_val_dr = pca.transform(X_val).reshape((val_len, 1, rd))
-
-    # Fixing batchsize
-    batchsize = 500
 
     # Building or loading model depending on existence
     if model_exist_flag == 1:

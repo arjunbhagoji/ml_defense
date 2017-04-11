@@ -23,9 +23,8 @@ from lib.defenses.nn_defenses import *
 
 #from lasagne.regularization import l2
 
+#-----------------------------------------------------------------------------#
 def main(argv):
-
-    model_dict = model_dict_create()
 
     # Parameters
     batchsize = 500                             # Fixing batchsize
@@ -33,21 +32,23 @@ def main(argv):
     dev_list = np.linspace(0.1, 1.0, no_of_mags)
     rd_list = [331, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
 
+    # Create model_dict from arguments
+    model_dict = model_dict_create()
+
+    # Load and parse specified dataset into numpy arrays
+    print('Loading data...')
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+
+    # Create data_dict containing metadata of dataset
+    data_dict = get_data_shape(X_train, X_test, X_val)
+
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
-    # Check if model already exists
-    network, model_exist_flag = model_creator(model_dict, input_var,
-                                                            target_var)
-
-    print('Loading data...')
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
-
-    channels = X_test.shape[1]
-    height = X_test.shape[2]
-    width = X_test.shape[3]
-    n_features = channels*height*width
+    # Create model and check if model already exists
+    network, model_exist_flag = model_creator(model_dict, data_dict, input_var,
+                                              target_var)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -78,7 +79,7 @@ def main(argv):
     adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var,
                                test_prediction, dev_list, X_test, y_test)
     print_output(model_dict, output_list, dev_list)
-    save_images(model_dict, n_features, X_test, adv_x_all, dev_list)
+    save_images(model_dict, data_dict, X_test, adv_x_all, dev_list)
 
     # Run defense
     defense = model_dict['defense']
@@ -88,10 +89,12 @@ def main(argv):
                            dev_list, adv_x_all, rd, X_train, y_train, X_test,
                            y_test)
         elif defense == 'retrain':
-            retrain_defense(model_dict, input_var, target_var, test_prediction,
-                            dev_list, adv_x_all, rd, X_train, y_train, X_test,
-                            y_test, X_val, y_val)
+            retrain_defense(model_dict, data_dict, input_var, target_var,
+                            test_prediction, dev_list, adv_x_all, rd, X_train,
+                            y_train, X_test, y_test, X_val, y_val)
+#-----------------------------------------------------------------------------#
 
-
+#-----------------------------------------------------------------------------#
 if __name__ == '__main__':
    main(sys.argv[1:])
+#-----------------------------------------------------------------------------#
