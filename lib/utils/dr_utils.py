@@ -47,7 +47,7 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
     test_len = data_dict['test_len']
     no_of_features = data_dict['no_of_features']
 
-    #Reshaping for PCA function
+    # Reshape for PCA function
     DR_in_train = X_train.reshape(train_len,no_of_features)
     DR_in_test = X_test.reshape(test_len,no_of_features)
     if X_val is not None:
