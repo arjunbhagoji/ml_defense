@@ -11,10 +11,6 @@ from ..utils.theano_utils import *
 from ..utils.attack_utils import *
 from ..utils.data_utils import *
 
-script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-rel_path_o = "output_data/"
-abs_path_o = os.path.join(script_dir, rel_path_o)
-
 #------------------------------------------------------------------------------#
 def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
     batch_len = x_curr.shape[0]

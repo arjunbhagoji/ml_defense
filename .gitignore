@@ -4,6 +4,10 @@
 /temp
 /visual_data
 /deprecated
+/svm_models
+/svm_output_data
+/svm_visual_data
+/plots
 *.pyc
 *.zip
 *.pem

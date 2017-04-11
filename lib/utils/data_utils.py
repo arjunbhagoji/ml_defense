@@ -8,6 +8,61 @@ from matplotlib import image as img
 from os.path import dirname
 
 #------------------------------------------------------------------------------#
+def model_dict_create():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', default='MNIST', type=str,
+                        help='Specify dataset')
+    parser.add_argument('-c', '--channels', default=1, type=int,
+                        help='Specify number of input channels')
+    parser.add_argument('-m', '--model', default='mlp', type=str,
+                        help='Specify neural network model')
+    parser.add_argument('--n_epoch', default=None, type=int,
+                        help='Specify number of epochs for training')
+    parser.add_argument('-a', '--attack', default='fg', type=str,
+                        help='Specify method to create adversarial samples')
+    parser.add_argument('-d', '--defense', default=None, type=str,
+                        help='Specify defense mechanism')
+    parser.add_argument('-dr', '--dim_red', default='pca', type=str,
+                        help='Specify defense mechanism')
+    args = parser.parse_args()
+
+    model_dict = {}
+
+    n_epoch = args.n_epoch
+    model_dict.update({'dataset':args.dataset})
+    model_dict.update({'channels':args.channels})
+    model_dict.update({'model_name':args.model})
+    model_dict.update({'attack':args.attack})
+    model_dict.update({'defense':args.defense})
+    model_dict.update({'num_epochs':args.n_epoch})
+    model_dict.update({'dim_red':args.dim_red})
+
+    return model_dict
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def get_model_name(model_dict, rd=None, rev=None):
+    model_name = model_dict['model_name']
+    n_out = model_dict['n_out']
+    depth = model_dict['depth']
+    width = model_dict['width']
+    DR = model_dict['dim_red']
+
+    if model_name == 'mlp' or model_name =='custom':
+        m_name='model_FC{}_{}_{}'.format(n_out, depth, width)
+    elif model_name =='cnn':
+        m_name='model_cnn{}_{}_{}'.format(n_out, depth, width)
+
+    if rd != None:
+        m_name += '_{}'.format(rd)
+        m_name += '_'+DR
+    if rev != None: m_name += '_rev'
+    if model_name == 'custom': m_name += '_drop'
+
+    return m_name
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
 def resolve_path_i(model_dict):
     """
     Resolve absolute paths of input data for different datasets
@@ -90,10 +145,11 @@ def resolve_path_v(model_dict):
     -------
     absolute path to output directory
     """
+    model_name = get_model_name(model_dict)
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_v = 'visual_data/' + dataset
+    rel_path_v = 'visual_data/' + dataset + '/' + model_name
     if dataset == 'GTSRB': rel_path_v += str(channels)
     abs_path_v = os.path.join(script_dir, rel_path_v + '/')
     if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
@@ -223,53 +279,94 @@ def load_dataset(model_dict):
         return load_dataset_MNIST(model_dict)
     elif dataset == 'GTSRB':
         return load_dataset_GTSRB(model_dict)
+    elif dataset == 'HAR':
+        return load_dataset_HAR(model_dict)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
+def get_data_shape(X_train, X_test, X_val = None):
+    data_dict = {}
+    train_len = len(X_train)
+    test_len = len(X_test)
+    data_dict.update({'train_len':train_len,'test_len':test_len})
+    if X_val is not None:
+        val_len = len(X_val)
+        data_dict.update({'val_len':val_len})
+    # else : val_len = None
+    no_of_dim = X_train.ndim
+    data_dict.update({'no_of_dim':no_of_dim})
+    if no_of_dim == 2:
+        no_of_features = X_train.shape[1]
+        data_dict.update({'no_of_features':no_of_features})
+    elif no_of_dim == 3:
+        channels = X_train.shape[1]
+        features_per_c = X_train.shape[2]
+        no_of_features = channels*features_per_c
+        data_dict.update({'no_of_features':no_of_features,'channels':channels,
+        'features_per_c':features_per_c})
+    elif no_of_dim ==4:
+        channels = X_train.shape[1]
+        height = X_train.shape[2]
+        width = X_train.shape[3]
+        no_of_features = channels*height*width
+        data_dict.update({'height':height, 'width':width, 'channels':channels,
+        'no_of_features':no_of_features})
+    return data_dict
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
 # Saves first 10 images from the test set and their adv. samples
-def save_images(model_dict, n_features, X_test, adv_x, dev_list, rd=None, dr_alg=None, rev=None):
+def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
+                    dr_alg=None, rev=None):
     no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
-    channels = X_curr.shape[1]
+    channels = data_dict['channels']
     atk = model_dict['attack']
     dataset = model_dict['dataset']
-    DR =model_dict['dim_red']
+    DR = model_dict['dim_red']
     abs_path_v=resolve_path_v(model_dict)
     if rd != None and rev == None:
-        height = int(np.sqrt(n_features))
+        no_of_features = data_dict['no_of_features']
+        height = int(np.sqrt(no_of_features))
         width = height
-        X_curr_rev = dr_alg.inverse_transform(X_curr).reshape((no_of_img, channels, height, width))
+        X_curr_rev = dr_alg.inverse_transform(X_curr).reshape((no_of_img,
+                                                    channels, height, width))
     elif rd == None or (rd != None and rev != None):
-        height = X_test.shape[2]
-        width = X_test.shape[3]
+        height = data_dict['height']
+        width = data_dict['width']
 
     if channels == 1:
         dev_count=0
         for dev_mag in dev_list:
             if rd != None and rev == None:
-                adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:,dev_count]).reshape((no_of_img, channels, height, width))
+                adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:,
+                    dev_count]).reshape((no_of_img, channels, height, width))
                 np.clip(adv_x_curr, 0, 1)
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    # fig=plt.imshow(adv*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
-                    # plt.savefig(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd, dev_mag))
-                    # fig=plt.imshow(orig*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
-                    # plt.savefig(abs_path_v+'{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd))
-                    img.imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk, dataset, i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255, cmap='gray')
-                    img.imsave(abs_path_v+'{}_{}_{}_{}_orig.png'.format(dataset, i, DR, rd), adv*255, vmin=0, vmax=255, cmap='gray')
-                    # imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, DR, rd, dev_mag), adv*255)
-                    # imsave(abs_path_v+'{}_{}_{}_{}_orig.jpg'.format(atk, dataset, i, DR, rd), orig*255)
+                    img.imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk,
+                        i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
+                        cmap='gray')
+                    img.imsave(abs_path_v+'{}_{}_{}_{}_orig.png'.format(dataset,
+                        i, DR, rd), adv*255, vmin=0, vmax=255, cmap='gray')
+
             elif rd == None or rev != None:
                 adv_x_curr = adv_x[indices,:,dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height,width))
                     orig = X_curr[i].reshape((height,width))
-                    # fig=plt.imshow(adv*255, cmap='gray', interpolation='nearest', vmin=0, vmax=255)
-                    # plt.savefig(abs_path_v+'{}_{}_{}_mag{}.png'.format(atk, dataset, i, dev_mag))
-                    imsave(abs_path_v+'{}_{}_{}_mag{}.jpg'.format(atk, dataset, i, dev_mag), adv*255)
-                    imsave(abs_path_v+'{}_{}_{}_orig.jpg'.format(atk, dataset, i), orig*255)
+                    if rd != None:
+                        fname = abs_path_v+'{}_{}_{}_{}_rev_{}'.format(atk,
+                                                            dataset, i, DR, rd)
+                    elif rd == None:
+                        fname = abs_path_v+'{}_{}_{}'.format(atk, dataset, i)
+                    img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
+                                                vmin=0, vmax=255, cmap='gray')
+                    img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
+                                                                    cmap='gray')
             dev_count += 1
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)

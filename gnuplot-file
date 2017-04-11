@@ -67,3 +67,57 @@ set title 'Strategic FG Attack on NN'
 plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
 unset output
+
+set output "plots/fg_mnist_nn_2_100_strat_rev_PCA.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on NN'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/svm_linear_cls10_l2_C1.0_strat.png"
+
+set xlabel 'r$\epsilon$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:1.0]
+set yrange [0:1.0]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Optimal Attack on Linear SVM'
+
+plot for [IDX=0:6] 'svm_output_data/MNIST/svm_linear_cls10_l2_C1.0_strat_pca.txt' i (2*IDX) u 1:4 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/svm_linear_cls10_l2_C1.0_strat_rp.png"
+
+set xlabel 'r$\epsilon$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:1.0]
+set yrange [0:1.0]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Optimal Attack on Linear SVM'
+
+plot for [IDX=0:6] 'svm_output_data/MNIST/svm_linear_cls10_l2_C1.0_strat_rp.txt' i (2*IDX) u 1:4 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fgs_mnist_nn_2_100_strat_rev_PCA.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:0.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FGS Attack on NN'
+
+plot for [IDX=0:6] 'output_data/MNIST/fgs_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
