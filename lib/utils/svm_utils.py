@@ -85,7 +85,7 @@ def resolve_path_v(model_dict):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_dict_create():
+def svm_model_dict_create():
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-st','--svm_type', default='linear', type=str,
@@ -257,7 +257,7 @@ def acc_calc_all(clf, X_adv, y_test, y_ini):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def file_create(model_dict, rd,strat_flag=None):
+def file_create(model_dict, rd, strat_flag=None):
 
     """
     Creates and returns a file descriptor, named corresponding to model,

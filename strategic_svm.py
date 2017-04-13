@@ -56,26 +56,26 @@ def main(argv):
     # and loss='squared_hinge' are not supported when dual=True,
     # Parameters: penalty='l1', loss='squared_hinge', dual=True
 
-    model_dict = model_dict_create()
-    DR = model_dict['dim_red']
+    model_dict = svm_model_dict_create()
+    dim_red = model_dict['dim_red']
     rev_flag = None
 
     print('Loading data...')
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+    dataset = model_dict['dataset']
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+        X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+    elif dataset == 'HAR':
+        X_train, y_train, X_test, y_test = load_dataset(model_dict)
     # TODO: 2 classes case
     # if model_dict['classes'] == 2:
     #     X_train = X_train
-    train_len = len(X_train)
-    test_len = len(X_test)
-    channels = X_test.shape[1]
-    height = X_test.shape[2]
-    width = X_test.shape[3]
-    n_features = channels*height*width
+    data_dict = get_data_shape(X_train, X_test)
+    no_of_features = data_dict['no_of_features']
 
     # Reshape dataset to have dimensions suitable for SVM
-    X_train_flat = X_train.reshape(-1, n_features)
-    X_test_flat = X_test.reshape(-1, n_features)
-    X_val_flat= X_val.reshape(-1, n_features)
+    X_train_flat = X_train.reshape(-1, no_of_features)
+    X_test_flat = X_test.reshape(-1, no_of_features)
+    # X_val_flat= X_val.reshape(-1, no_of_features)
 
     # Create a new model or load an existing one
     clf = model_creator(model_dict, X_train_flat, y_train)

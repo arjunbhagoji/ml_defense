@@ -13,6 +13,7 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
     model_name = model_dict['model_name']
     DR = model_dict['dim_red']
     no_of_dim = data_dict['no_of_dim']
+    n_out = data_dict['n_out']
 
     # Determine input size
     if no_of_dim == 2:
@@ -27,15 +28,6 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
         height = data_dict['height']
         width = data_dict['width']
         in_shape = (None, channels, height, width)
-
-    # Determine output size
-    if dataset == 'HAR':
-        n_out = 6
-    elif dataset == 'MNIST':
-        n_out = 10
-    elif dataset == 'GTSRB':
-        n_out = 43
-    model_dict.update({'n_out':n_out})
 
     #------------------------------- CNN model --------------------------------#
     if model_name == 'cnn':
@@ -97,7 +89,7 @@ def model_loader(model_dict, rd=None, DR=None,  rev=None):
     abs_path_m = resolve_path_m(model_dict)
 
     if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
+        model_path = abs_path_m + 'model_cnn{}_{}_papernot'.format()
     elif model_name == 'mlp':
         depth = model_dict['depth']
         width = model_dict['width']

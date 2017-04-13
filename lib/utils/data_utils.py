@@ -53,15 +53,14 @@ def get_model_name(model_dict, rd=None, rev=None):
     """
 
     model_name = model_dict['model_name']
-    n_out = model_dict['n_out']
     depth = model_dict['depth']
     width = model_dict['width']
     DR = model_dict['dim_red']
 
     if model_name == 'mlp' or model_name =='custom':
-        m_name='model_FC{}_{}_{}'.format(n_out, depth, width)
+        m_name='model_FC_{}_{}'.format(depth, width)
     elif model_name =='cnn':
-        m_name='model_cnn{}_{}_{}'.format(n_out, depth, width)
+        m_name='model_cnn_{}_{}'.format(depth, width)
 
     if rd != None: m_name += '_{}_{}'.format(rd, DR)
     if rev != None: m_name += '_rev'
@@ -349,6 +348,15 @@ def get_data_shape(X_train, X_test, X_val=None):
         no_of_features = channels*height*width
         data_dict.update({'height':height, 'width':width, 'channels':channels,
                           'no_of_features':no_of_features})
+
+    # Determine output size
+    if dataset == 'HAR':
+        n_out = 6
+    elif dataset == 'MNIST':
+        n_out = 10
+    elif dataset == 'GTSRB':
+        n_out = 43
+    data_dict.update({'n_out':n_out})
 
     return data_dict
 #------------------------------------------------------------------------------#
