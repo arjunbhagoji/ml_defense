@@ -85,11 +85,11 @@ def resolve_path_v(model_dict):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_dict_create():
+def svm_model_dict_create():
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-st','--svm_type', default='linear', type=str,
-            help='Specify type of SVM to be used (default: linear)')
+           help='Specify type of SVM to be used (default: linear)')
     parser.add_argument('--dataset', default='MNIST', type=str,
            help='Specify dataset (default: MNIST)')
     parser.add_argument('-c', '--channels', default=1, type=int,
@@ -133,15 +133,15 @@ def get_model_name(model_dict, rd=None):
 
     if rd == None:
         model_name = 'svm_{}_cls{}_{}_C{}'.format(model_dict['svm_type'],
-                                                model_dict['classes'],
-                                               model_dict['penalty'],
-                                               model_dict['penconst'])
+                                                  model_dict['classes'],
+                                                  model_dict['penalty'],
+                                                  model_dict['penconst'])
     else:
         model_name = 'svm_{}_cls{}_{}{}_{}_C{}'.format(model_dict['svm_type'],
-                                                    model_dict['classes'],
-                                                    model_dict['dim_red'], rd,
-                                                    model_dict['penalty'],
-                                                    model_dict['penconst'])
+                                                      model_dict['classes'],
+                                                      model_dict['dim_red'], rd,
+                                                      model_dict['penalty'],
+                                                      model_dict['penconst'])
     return model_name
 #------------------------------------------------------------------------------#
 
@@ -152,6 +152,7 @@ def model_loader(model_dict, rd=None):
     Returns a classifier object if it already exists. Returns None, otherwise.
     """
 
+    print('Loading model...')
     abs_path_m = resolve_path_m(model_dict)
     try:
         clf = joblib.load(abs_path_m + get_model_name(model_dict, rd) + '.pkl')
@@ -167,15 +168,21 @@ def model_trainer(model_dict, X_train, y_train, rd=None):
     Trains and returns SVM. Also save SVM to file.
     """
 
+    print('Training model...')
     abs_path_m = resolve_path_m(model_dict)
     svm_model = model_dict['svm_type']
     C = model_dict['penconst']
     penalty = model_dict['penalty']
+
+    # Create model based on parameters
     if svm_model == 'linear':
         clf = svm.LinearSVC(C=C, penalty=penalty, dual=False)
-        clf.fit(X_train, y_train)
     elif svm_model != 'linear':
         clf = svm.SVC(C=C, kernel=svm_model)
+
+    # Train model
+    clf.fit(X_train, y_train)
+
     # Save model
     joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd) + '.pkl')
     return clf
@@ -205,8 +212,12 @@ def model_tester(model_dict, clf, X_test, y_test):
     """
 
     predicted_labels = clf.predict(X_test)
-    # Magnitude of weight vectors for each class
-    norm = np.linalg.norm(clf.coef_, axis=1)
+    if model_dict['svm_type'] == 'linear':
+        # Magnitude of weight vectors for each class
+        norm = np.linalg.norm(clf.coef_, axis=1)
+    else:
+        # norm is arbritarily set to one for kernel SVM
+        norm = np.ones(model_dict['classes'])
     # Distance from each sample to hyperplane of each class
     dist = clf.decision_function(X_test)
 
@@ -287,12 +298,14 @@ def print_svm_output(model_dict, output_list, dev_list, rd=None, strat_flag=None
         for item in output_list[i]:
             plotfile.write(' {0:.3f}'.format(item))
         plotfile.write('\n')
-    plotfile.write('\n'+'\n')
+    plotfile.write('\n\n')
     plotfile.close()
 #------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
-                        dr_alg=None, rev=None):
+                    dr_alg=None, rev=None):
+
     no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
@@ -338,6 +351,7 @@ def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
+#------------------------------------------------------------------------------#
 
 # #------------------------------------------------------------------------------#
 # def plotter(acc_def, acc, dev_list, rd_list, recons_flag=0, strat_flag=0):
