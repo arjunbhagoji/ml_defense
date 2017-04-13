@@ -3,8 +3,8 @@ import argparse
 from sklearn import svm
 from sklearn.decomposition import PCA
 
-from lib.utils.data_utils import *
 from lib.utils.svm_utils import *
+from lib.utils.data_utils import *
 from lib.utils.dr_utils import *
 
 #------------------------------------------------------------------------------#
@@ -51,15 +51,12 @@ def mult_cls_atk(clf, X_test, dev_mag, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 def main(argv):
 
-    # TODO: error when use l1 norm
-    # ValueError: Unsupported set of arguments: The combination of penalty='l1'
-    # and loss='squared_hinge' are not supported when dual=True,
-    # Parameters: penalty='l1', loss='squared_hinge', dual=True
-
+    # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
-    dim_red = model_dict['dim_red']
+    DR = model_dict['dim_red']
     rev_flag = None
 
+    # Load dataset and create data_dict to store metadata
     print('Loading data...')
     dataset = model_dict['dataset']
     if (dataset == 'MNIST') or (dataset == 'GTSRB'):
@@ -69,6 +66,7 @@ def main(argv):
     # TODO: 2 classes case
     # if model_dict['classes'] == 2:
     #     X_train = X_train
+    
     data_dict = get_data_shape(X_train, X_test)
     no_of_features = data_dict['no_of_features']
 
@@ -109,9 +107,10 @@ def main(argv):
 
         # Dimension reduce dataset and reshape
         if DR == 'pca':
-            X_train_dr, X_test_dr, pca = pca_dr(X_train, X_test, rd)
+            X_train_dr, X_test_dr, pca = pca_dr(X_train_flat, X_test_flat, rd)
         elif DR == 'rp':
-            X_train_dr, X_test_dr, grp = random_proj_dr(X_train, X_test, rd)
+            X_train_dr, X_test_dr, grp = random_proj_dr(X_train_flat,
+                                                        X_test_flat, rd)
         X_train_dr = X_train_dr.reshape(-1, rd)
         X_test_dr = X_test_dr.reshape(-1, rd)
 
