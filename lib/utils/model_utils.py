@@ -12,8 +12,8 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
     dataset = model_dict['dataset']
     model_name = model_dict['model_name']
     DR = model_dict['dim_red']
+    n_out = model_dict['n_out']
     no_of_dim = data_dict['no_of_dim']
-    n_out = data_dict['n_out']
 
     # Determine input size
     if no_of_dim == 2:
@@ -89,18 +89,21 @@ def model_loader(model_dict, rd=None, DR=None,  rev=None):
     abs_path_m = resolve_path_m(model_dict)
 
     if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn{}_{}_papernot'.format()
+        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
     elif model_name == 'mlp':
         depth = model_dict['depth']
         width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
+        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
     elif model_name == 'custom':
         depth = model_dict['depth']
         width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
+        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+
+    reg = model_dict['reg']
 
     if rd != None: model_path += '_{}_{}'.format(rd, DR)
     if rev != None: model_path += '_rev'
+    if reg != None: model_path += '_reg_{}'.format(reg)
     if model_name == 'custom': model_path += '_drop'
     with np.load(model_path + '.npz') as f:
         param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
@@ -115,18 +118,21 @@ def model_saver(network, model_dict, rd=None, rev=None):
     DR = model_dict['dim_red']
 
     if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_9_layers_papernot'
+        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
     elif model_name == 'mlp':
         depth = model_dict['depth']
         width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
+        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
     elif model_name == 'custom':
         depth = model_dict['depth']
         width = model_dict['width']
-        model_path = abs_path_m + 'model_FC10_{}_{}'.format(depth, width)
+        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+
+    reg = model_dict['reg']
 
     if rd != None: model_path += '_{}_{}'.format(rd, DR)
     if rev != None: model_path += '_rev'
+    if reg != None: model_path += '_reg_{}'.format(reg)
     if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#

@@ -6,6 +6,7 @@ import time
 from os.path import dirname
 
 import lasagne
+from lasagne.regularization import l2, l1
 
 from lib.utils.data_utils import *
 
@@ -46,15 +47,20 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 #------------------------------------------------------------------------------#
 # Create a loss expression for training, i.e., a scalar objective we want
 # to minimize (for our multi-class problem, it is the cross-entropy loss):
-def loss_fn(model_predict, target_var):
+def loss_fn(model_predict, target_var, reg=None, network=None):
     loss_temp = lasagne.objectives.categorical_crossentropy(model_predict,
                                                             target_var)
+    loss_temp = loss_temp.mean()
     # Optional regularization
     #layers={layer_1:1e-7,layer_2:1e-7,network:1e-7}
     #l2_penalty=lasagne.regularization.regularize_layer_params_weighted(layers,
                                                                             #l2)
-    #loss=loss+l2_penalty
-    loss_temp = loss_temp.mean()
+    if reg == 'l2':
+        l2_penalty = lasagne.regularization.regularize_network_params(network, l2)
+        loss_temp = loss_temp + 1e-7 * l2_penalty
+    elif reg =='l1':
+        l1_penalty = lasagne.regularization.regularize_network_params(network, l1)
+        loss_temp = loss_temp + 1e-7 * l1_penalty
     return loss_temp
 #------------------------------------------------------------------------------#
 
@@ -86,12 +92,16 @@ def conf_fn(input_var, model_predict):
 
 #------------------------------------------------------------------------------#
 def model_trainer(input_var, target_var, prediction, test_prediction, params,
-                  model_dict, batchsize, X_train, y_train, X_val, y_val):
+                 model_dict, batchsize, X_train, y_train, X_val, y_val, network):
 
     rate = model_dict['rate']
     num_epochs = model_dict['num_epochs']
 
-    loss = loss_fn(prediction, target_var)
+    if model_dict['reg'] == None:
+        loss = loss_fn(prediction, target_var)
+    elif model_dict['reg'] != None:
+        reg = model_dict['reg']
+        loss = loss_fn(prediction, target_var, reg, network)
     # Create update expressions for training, i.e., how to modify the
     # parameters at each training step. Here, we use Stochastic Gradient
     # Descent (SGD) with Nesterov momentum.

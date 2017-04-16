@@ -28,22 +28,29 @@ def main(argv):
 
     # Parameters
     batchsize = 500                             # Fixing batchsize
-    no_of_mags = 10                             # No. of deviations to consider
-    dev_list = np.linspace(0.1, 1.0, no_of_mags)
-    rd_list = [331, 100, 50, 40, 30, 20, 10]    # Reduced dimensions used
+    no_of_mags = 50                          # No. of deviations to consider
+    dev_list = np.linspace(0.1, 5.0, no_of_mags)
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions used
 
     # Create model_dict from arguments
     model_dict = model_dict_create()
 
     # Load and parse specified dataset into numpy arrays
     print('Loading data...')
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+    dataset = model_dict['dataset']
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+        X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+    elif dataset == 'HAR':
+        X_train, y_train, X_test, y_test = load_dataset(model_dict)
 
     # Create data_dict containing metadata of dataset
     data_dict = get_data_shape(X_train, X_test, X_val)
+    no_of_dim = data_dict['no_of_dim']
 
     # Prepare Theano variables for inputs and targets
-    input_var = T.tensor4('inputs')
+    if no_of_dim == 2: input_var = T.tensor('inputs')
+    elif no_of_dim == 3: input_var = T.tensor3('inputs')
+    elif no_of_dim == 4: input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
     # Create model and check if model already exists
@@ -67,7 +74,7 @@ def main(argv):
         print('Starting training...')
         model_trainer(input_var, target_var, prediction, test_prediction,
                       params, model_dict, batchsize, X_train, y_train, X_val,
-                      y_val)
+                      y_val, network)
         model_saver(network, model_dict)
 
     # Checking performance on test set
@@ -76,22 +83,23 @@ def main(argv):
 
     # Running attack and saving samples
     print('Creating adversarial samples...')
-    adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var,
-                               test_prediction, dev_list, X_test, y_test)
+    adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
+                                        target_var, test_prediction, dev_list,
+                                        X_test, y_test)
     print_output(model_dict, output_list, dev_list)
-    save_images(model_dict, data_dict, X_test, adv_x_all, dev_list)
+    save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # Run defense
     defense = model_dict['defense']
-    for rd in rd_list:
-        if defense == 'recons':
-            recons_defense(model_dict, input_var, target_var, test_prediction,
-                           dev_list, adv_x_all, rd, X_train, y_train, X_test,
-                           y_test)
-        elif defense == 'retrain':
-            retrain_defense(model_dict, data_dict, input_var, target_var,
-                            test_prediction, dev_list, adv_x_all, rd, X_train,
-                            y_train, X_test, y_test, X_val, y_val)
+    if defense != None:
+        for rd in rd_list:
+            if defense == 'recons':
+                recons_defense(model_dict, input_var, target_var, test_prediction,
+                               dev_list, adv_x_ini, rd, X_train, y_train, X_test,
+                               y_test)
+            elif defense == 'retrain':
+                retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
+                                y_train, X_test, y_test, X_val, y_val)
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#

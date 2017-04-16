@@ -66,7 +66,7 @@ def main(argv):
     # TODO: 2 classes case
     # if model_dict['classes'] == 2:
     #     X_train = X_train
-    
+
     data_dict = get_data_shape(X_train, X_test)
     no_of_features = data_dict['no_of_features']
 
@@ -106,16 +106,14 @@ def main(argv):
         print('Reduced dimensions: {}'.format(rd))
 
         # Dimension reduce dataset and reshape
-        if DR == 'pca':
-            X_train_dr, X_test_dr, pca = pca_dr(X_train_flat, X_test_flat, rd)
-        elif DR == 'rp':
-            X_train_dr, X_test_dr, grp = random_proj_dr(X_train_flat,
-                                                        X_test_flat, rd)
+        X_train_dr, X_test_dr, dr_alg = dr_wrapper(X_train_flat, X_test_flat,
+                                                    DR, rd)
+
         X_train_dr = X_train_dr.reshape(-1, rd)
         X_test_dr = X_test_dr.reshape(-1, rd)
 
         # With dimension reduced dataset, create new model or load existing one
-        clf = model_creator(model_dict, X_train_dr, y_train, rd)
+        clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
         model_tester(model_dict, clf, X_test_dr, y_test)
 
         # Strategic attack: create new adv samples based on retrained clf
@@ -129,11 +127,6 @@ def main(argv):
                 save_svm_images(model_dict, n_features, X_test_dr, X_adv,
                                     dev_list[i], rd, dr_alg)
         print_svm_output(model_dict, output_list, dev_list, rd, strat_flag=1)
-
-    # TODO: Plot
-    # plotter(acc_recons, acc_no_def, dev_list, rd_list, recons_flag=1, strat_flag=0)
-    # plotter(acc_retrain, acc_no_def, dev_list, rd_list, recons_flag=0, strat_flag=0)
-    # plotter(acc_strat, acc_no_def, dev_list, rd_list, recons_flag=0, strat_flag=1)
 
 if __name__ == "__main__":
    main(sys.argv[1:])

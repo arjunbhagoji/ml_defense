@@ -54,8 +54,8 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
 
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
-def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
-                   X_test, y_test, rd=None, rev=None):
+def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
+                   dev_list, X_test, y_test, rd=None, rev=None):
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -72,23 +72,14 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
     : return dev_list: list of used epsilons
     """
 
-    test_len = len(X_test)
-    data_dim=X_test.ndim
-    channels = X_test.shape[1]
-    if data_dim==3:
-        n_features = X_test.shape[2]
-    elif data_dim==4:
-        height = X_test.shape[2]
-        width = X_test.shape[3]
-        n_features = height*width*channels
+    adv_len = data_dict['test_len']
+    no_of_dim = data_dict['no_of_dim']
+    channels = data_dict['channels']
+    no_of_features = data_dict['no_of_features']
 
     n_mags = len(dev_list)
-
     # Creating array to store adversarial samples
-    if rd == None or (rev != None and rd != None):
-        adv_x_all = np.zeros((test_len, n_features, n_mags))
-    elif rd != None and rev == None:
-        adv_x_all = np.zeros((test_len, rd, n_mags))
+    adv_x_all = np.zeros((adv_len, no_of_features, n_mags))
 
     validator, indexer, predictor, confidence = local_fns(input_var, target_var,
                                                           test_prediction)
@@ -97,13 +88,20 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
 
     gradient = grad_fn(input_var, target_var, test_prediction)
 
+    # Creating array of zeros to store adversarial samples
+    if no_of_dim == 2: adv_x = np.zeros((adv_len, no_of_features))
+    elif no_of_dim == 3:
+        features = data_dict['features_per_c']
+        adv_x = np.zeros((adv_len, channels, features))
+    elif no_of_dim ==4:
+        height = data_dict['height']
+        width = data_dict['width']
+        adv_x = np.zeros((adv_len, channels, height, width))
+
     o_list = []
     mag_count = 0
     for dev_mag in dev_list:
-        if rd == None or (rev != None and rd != None):
-            adv_x = np.zeros((test_len, channels, height, width))
-        elif rd != None and rev == None:
-            adv_x = np.zeros((test_len, 1, rd))
+        adv_x.fill(0)
         start_time = time.time()
         batch_len = 1000
         b_c = 0
@@ -118,10 +116,7 @@ def attack_wrapper(model_dict, input_var, target_var, test_prediction, dev_list,
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
                                    indexer, predictor, confidence))
         # Saving adversarial examples
-        if rd == None or rev != None:
-            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, n_features))
-        elif rd != None and rev == None:
-            adv_x_all[:,:,mag_count] = adv_x.reshape((test_len, rd))
+        adv_x_all[:,:,mag_count] = adv_x.reshape((adv_len, no_of_features))
         mag_count += 1
         print('Finished adv. samples with magnitude {:.3f}: took {:.3f}s'
               .format(dev_mag, time.time() - start_time))

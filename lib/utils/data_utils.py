@@ -29,6 +29,8 @@ def model_dict_create():
                         help='Specify defense mechanism')
     parser.add_argument('-dr', '--dim_red', default='pca', type=str,
                         help='Specify dimension reduction scheme')
+    parser.add_argument('-r', '--reg', default=None, type=str,
+                        help='Specify type of regularization to use')
     args = parser.parse_args()
 
     model_dict = {}
@@ -41,6 +43,17 @@ def model_dict_create():
     model_dict.update({'defense':args.defense})
     model_dict.update({'num_epochs':args.n_epoch})
     model_dict.update({'dim_red':args.dim_red})
+    model_dict.update({'reg':args.reg})
+
+    # Determine output size
+    dataset = model_dict['dataset']
+    if dataset == 'HAR':
+        n_out = 6
+    elif dataset == 'MNIST':
+        n_out = 10
+    elif dataset == 'GTSRB':
+        n_out = 43
+    model_dict.update({'n_out':n_out})
 
     return model_dict
 #------------------------------------------------------------------------------#
@@ -62,113 +75,13 @@ def get_model_name(model_dict, rd=None, rev=None):
     elif model_name =='cnn':
         m_name='model_cnn_{}_{}'.format(depth, width)
 
+    reg = model_dict['reg']
     if rd != None: m_name += '_{}_{}'.format(rd, DR)
     if rev != None: m_name += '_rev'
+    if reg != None: m_name += '_reg_{}'.format(reg)
     if model_name == 'custom': m_name += '_drop'
 
     return m_name
-#------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
-def resolve_path_i(model_dict):
-
-    """
-    Resolve absolute paths of input data for different datasets
-
-    Parameters
-    ----------
-    dataset : string
-              Name of desired dataset
-
-    Returns
-    -------
-    absolute path to input data directory
-    """
-
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_i = 'input_data/' + model_dict['dataset'] +'/'
-    abs_path_i = os.path.join(script_dir, rel_path_i)
-    if not os.path.exists(abs_path_i): os.makedirs(abs_path_i)
-    return abs_path_i
-#------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
-def resolve_path_m(model_dict):
-
-    """
-    Resolve absolute paths of models for different datasets
-
-    Parameters
-    ----------
-    model_dict : dictionary
-                 contains model's parameters
-
-    Returns
-    -------
-    absolute path to models directory
-    """
-
-    dataset = model_dict['dataset']
-    channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_m = 'nn_models/' + dataset
-    if dataset == 'GTSRB': rel_path_m += str(channels)
-    abs_path_m = os.path.join(script_dir, rel_path_m + '/')
-    if not os.path.exists(abs_path_m): os.makedirs(abs_path_m)
-    return abs_path_m
-#------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
-def resolve_path_o(model_dict):
-
-    """
-    Resolve absolute paths of output data for different datasets
-
-    Parameters
-    ----------
-    model_dict : dictionary
-                 contains model's parameters
-
-    Returns
-    -------
-    absolute path to output directory
-    """
-
-    dataset = model_dict['dataset']
-    channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_o = 'output_data/' + dataset
-    if dataset == 'GTSRB': rel_path_o += str(channels)
-    abs_path_o = os.path.join(script_dir, rel_path_o + '/')
-    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
-    return abs_path_o
-#------------------------------------------------------------------------------#
-
-#------------------------------------------------------------------------------#
-def resolve_path_v(model_dict):
-
-    """
-    Resolve absolute paths of visual data for different datasets
-
-    Parameters
-    ----------
-    model_dict : dictionary
-                 contains model's parameters
-
-    Returns
-    -------
-    absolute path to visual data directory
-    """
-
-    model_name = get_model_name(model_dict)
-    dataset = model_dict['dataset']
-    channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_v = 'visual_data/' + dataset + '/' + model_name
-    if dataset == 'GTSRB': rel_path_v += str(channels)
-    abs_path_v = os.path.join(script_dir, rel_path_v + '/')
-    if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
-    return abs_path_v
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -349,36 +262,59 @@ def get_data_shape(X_train, X_test, X_val=None):
         data_dict.update({'height':height, 'width':width, 'channels':channels,
                           'no_of_features':no_of_features})
 
-    # Determine output size
-    if dataset == 'HAR':
-        n_out = 6
-    elif dataset == 'MNIST':
-        n_out = 10
-    elif dataset == 'GTSRB':
-        n_out = 43
-    data_dict.update({'n_out':n_out})
-
     return data_dict
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+def reshape_data(X, data_dict, rd=None, rev=None):
+    no_of_dim = data_dict['no_of_dim']
+    X_len = len(X)
+
+    if no_of_dim == 2:
+        if rd == None or (rd != None and rev != None):
+            no_of_features = data_dict['no_of_features']
+            X = X.reshape((X_len, no_of_features))
+        elif rd != None:
+            X= X.reshape((X_len, rd))
+    elif no_of_dim == 3:
+        channels = data_dict['channels']
+        if rd == None:
+            features_per_c = data_dict['features_per_c']
+            X = X.reshape((X_len, channels, features_per_c))
+        elif rd != None:
+            X = X.reshape((X_len, channels, rd))
+    elif no_of_dim == 4:
+        channels = data_dict['channels']
+        if rd == None or (rd != None and rev != None):
+            height = data_dict['height']
+            width = data_dict['width']
+            X = X.reshape((X_len, channels, height, width))
+
+    return X
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Saves first 10 images from the test set and their adv. samples
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 dr_alg=None, rev=None):
-    no_of_img = 5
+    from lib.utils.dr_utils import invert_dr
+
+    no_of_img = 1
     indices = range(no_of_img)
     X_curr = X_test[indices]
     channels = data_dict['channels']
     atk = model_dict['attack']
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    abs_path_v=resolve_path_v(model_dict)
+    abs_path_v = resolve_path_v(model_dict)
+
     if rd != None and rev == None:
-        no_of_features = data_dict['no_of_features']
-        height = int(np.sqrt(no_of_features))
+        X_curr = invert_dr(X_curr, dr_alg, DR)
+        features_per_c = X_curr.shape[-1]
+        height = int(np.sqrt(features_per_c))
         width = height
-        X_curr_rev = dr_alg.inverse_transform(X_curr).reshape((no_of_img,
-                                                    channels, height, width))
+        X_curr_rev = X_curr.reshape((no_of_img, channels, height, width))
     elif rd == None or (rd != None and rev != None):
         height = data_dict['height']
         width = data_dict['width']
@@ -386,18 +322,19 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     if channels == 1:
         dev_count=0
         for dev_mag in dev_list:
+            adv_curr = adv_x[indices,:,dev_count]
             if rd != None and rev == None:
-                adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:,
-                    dev_count]).reshape((no_of_img, channels, height, width))
-                np.clip(adv_x_curr, 0, 1)
+                adv_x_rev = invert_dr(adv_curr, dr_alg, DR)
+                adv_x_rev = adv_x_rev.reshape((no_of_img, channels, height, width))
+                np.clip(adv_x, 0, 1)
                 for i in indices:
-                    adv = adv_x_curr[i].reshape((height, width))
+                    adv = adv_x_rev[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    img.imsave(abs_path_v+'{}_{}_{}_{}_{}_mag{}.png'.format(atk,
+                    img.imsave(abs_path_v+'{}_{}_{}_{}_mag{}.png'.format(atk,
                         i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
                         cmap='gray')
-                    img.imsave(abs_path_v+'{}_{}_{}_{}_orig.png'.format(dataset,
-                        i, DR, rd), adv*255, vmin=0, vmax=255, cmap='gray')
+                    img.imsave(abs_path_v+'{}_{}_{}_orig.png'.format(i, DR,
+                                rd), orig*255, vmin=0, vmax=255, cmap='gray')
 
             elif rd == None or rev != None:
                 adv_x_curr = adv_x[indices,:,dev_count]
@@ -405,18 +342,19 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                     adv = adv_x_curr[i].reshape((height,width))
                     orig = X_curr[i].reshape((height,width))
                     if rd != None:
-                        fname = abs_path_v+'{}_{}_{}_{}_rev_{}'.format(atk,
-                                                            dataset, i, DR, rd)
+                        fname = abs_path_v+'{}_{}_{}_rev_{}'.format(atk, i,
+                                                                        DR, rd)
                     elif rd == None:
-                        fname = abs_path_v+'{}_{}_{}'.format(atk, dataset, i)
+                        fname = abs_path_v+'{}_{}'.format(atk, i)
                     img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
                                                 vmin=0, vmax=255, cmap='gray')
                     img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
                                                                     cmap='gray')
             dev_count += 1
-    else:
-        adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
-        orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
+    # else:
+        # TODO
+        # adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
+        # orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -454,6 +392,7 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
     model_name = model_dict['model_name']
     DR = model_dict['dim_red']
     fname = model_dict['attack']
+    reg = model_dict['reg']
     # MLP model
     if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
@@ -466,6 +405,7 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
     if strat_flag != None: fname += '_strat'
     if rev != None: fname += '_rev'
     if rd != None: fname += '_' + DR
+    if reg != None: fname += '_reg_{}'.format(reg)
     if is_defense: fname += ('_' + model_dict['defense'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
@@ -489,4 +429,108 @@ def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
         plotfile.write('\n')
     plotfile.write('\n\n')
     plotfile.close()
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_i(model_dict):
+
+    """
+    Resolve absolute paths of input data for different datasets
+
+    Parameters
+    ----------
+    dataset : string
+              Name of desired dataset
+
+    Returns
+    -------
+    absolute path to input data directory
+    """
+
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_i = 'input_data/' + model_dict['dataset'] +'/'
+    abs_path_i = os.path.join(script_dir, rel_path_i)
+    if not os.path.exists(abs_path_i): os.makedirs(abs_path_i)
+    return abs_path_i
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_m(model_dict):
+
+    """
+    Resolve absolute paths of models for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to models directory
+    """
+
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_m = 'nn_models/' + dataset
+    if dataset == 'GTSRB': rel_path_m += str(channels)
+    abs_path_m = os.path.join(script_dir, rel_path_m + '/')
+    if not os.path.exists(abs_path_m): os.makedirs(abs_path_m)
+    return abs_path_m
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_o(model_dict):
+
+    """
+    Resolve absolute paths of output data for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to output directory
+    """
+
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_o = 'output_data/' + dataset
+    if dataset == 'GTSRB': rel_path_o += str(channels)
+    abs_path_o = os.path.join(script_dir, rel_path_o + '/')
+    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
+    return abs_path_o
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def resolve_path_v(model_dict):
+
+    """
+    Resolve absolute paths of visual data for different datasets
+
+    Parameters
+    ----------
+    model_dict : dictionary
+                 contains model's parameters
+
+    Returns
+    -------
+    absolute path to visual data directory
+    """
+
+    model_name = get_model_name(model_dict)
+    dataset = model_dict['dataset']
+    channels = model_dict['channels']
+    defense = model_dict['defense']
+    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    rel_path_v = 'visual_data/' + dataset + '/' + model_name
+    if dataset == 'GTSRB': rel_path_v += str(channels)
+    if defense != None: rel_path_v += '/' + defense
+    abs_path_v = os.path.join(script_dir, rel_path_v + '/')
+    if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
+    return abs_path_v
 #------------------------------------------------------------------------------#

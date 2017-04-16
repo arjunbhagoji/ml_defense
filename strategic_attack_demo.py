@@ -30,12 +30,6 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
                                                 X_val, rev_flag)
 
-    # elif rev_flag != None:
-    #     X_train, X_test, pca = pca_dr(X_train, X_test, rd, rev_flag)
-    #     X_val_dr = pca.transform(X_val).reshape((test_len,channels,rd))
-    #     X_val = pca.inverse_transform(X_val_dr).reshape((test_len,channels
-    #                                                             ,height,width))
-
     # Getting data parameters after dimensionality reduction
     data_dict = get_data_shape(X_train, X_test, X_val)
     no_of_dim = data_dict['no_of_dim']
@@ -67,15 +61,16 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
         print("Starting training...")
         model_trainer(input_var, target_var, prediction, test_prediction,
                       params, model_dict, batchsize, X_train, y_train,
-                      X_val, y_val)
+                      X_val, y_val, network)
         model_saver(network, model_dict, rd, rev=rev_flag)
 
     # Evaluating on retrained inputs
     test_model_eval(model_dict, input_var, target_var, test_prediction,
                     X_test, y_test, rd, rev=rev_flag)
     print ("Starting attack...")
-    adv_x_all, output_list = attack_wrapper(model_dict, input_var, target_var,
-                    test_prediction, dev_list, X_test, y_test, rd, rev=rev_flag)
+    adv_x_all, output_list = attack_wrapper(model_dict, data_dict, input_var,
+                                            target_var, test_prediction,
+                                    dev_list, X_test, y_test, rd, rev=rev_flag)
 
     # Printing result to file
     print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
@@ -94,10 +89,10 @@ def main():
     model_dict = model_dict_create()
 
     # Reduced dimensions used
-    # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-    rd_list = [100]
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    # rd_list = [100]
     # No. of deviations to consider
-    no_of_mags = 50
+    no_of_mags = 1
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
 
     # Load dataset specified in model_dict

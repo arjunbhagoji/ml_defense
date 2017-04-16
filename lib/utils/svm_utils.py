@@ -125,7 +125,7 @@ def svm_model_dict_create():
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def get_model_name(model_dict, rd=None):
+def get_model_name(model_dict, rd=None, rev=None):
 
     """
     Helper function to get model name from <model_dict> and <rd>
@@ -136,17 +136,24 @@ def get_model_name(model_dict, rd=None):
                                                   model_dict['classes'],
                                                   model_dict['penalty'],
                                                   model_dict['penconst'])
-    else:
+    elif rd != None and rev == None:
         model_name = 'svm_{}_cls{}_{}{}_{}_C{}'.format(model_dict['svm_type'],
                                                       model_dict['classes'],
                                                       model_dict['dim_red'], rd,
                                                       model_dict['penalty'],
                                                       model_dict['penconst'])
+    elif rd != None and rev != None:
+        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{}'.format(model_dict['svm_type'],
+                                                      model_dict['classes'],
+                                                      model_dict['dim_red'], rd,
+                                                      model_dict['penalty'],
+                                                      model_dict['penconst'])
+
     return model_name
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None):
+def model_loader(model_dict, rd=None, rev=None):
 
     """
     Returns a classifier object if it already exists. Returns None, otherwise.
@@ -155,14 +162,14 @@ def model_loader(model_dict, rd=None):
     print('Loading model...')
     abs_path_m = resolve_path_m(model_dict)
     try:
-        clf = joblib.load(abs_path_m + get_model_name(model_dict, rd) + '.pkl')
+        clf = joblib.load(abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
     except:
         clf = None
     return clf
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_trainer(model_dict, X_train, y_train, rd=None):
+def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
     """
     Trains and returns SVM. Also save SVM to file.
@@ -184,22 +191,22 @@ def model_trainer(model_dict, X_train, y_train, rd=None):
     clf.fit(X_train, y_train)
 
     # Save model
-    joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd) + '.pkl')
+    joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
     return clf
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_creator(model_dict, X_train, y_train, rd=None):
+def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 
     """
     Returns a SVM classifier
     """
 
     # Load model based on model_dict
-    clf = model_loader(model_dict, rd)
+    clf = model_loader(model_dict, rd, rev)
     # If model does not exist, train a new SVM
     if clf == None:
-        clf = model_trainer(model_dict, X_train, y_train, rd)
+        clf = model_trainer(model_dict, X_train, y_train, rd, rev)
     return clf
 #------------------------------------------------------------------------------#
 
