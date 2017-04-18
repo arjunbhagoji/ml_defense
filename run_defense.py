@@ -12,16 +12,10 @@ import lasagne
 from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
-from lib.utils.theano_utils import *
-from lib.utils.lasagne_utils import *
 from lib.utils.data_utils import *
-from lib.utils.attack_utils import *
-from lib.utils.dr_utils import *
 from lib.utils.model_utils import *
 from lib.attacks.nn_attacks import *
 from lib.defenses.nn_defenses import *
-
-#from lasagne.regularization import l2
 
 #-----------------------------------------------------------------------------#
 def main(argv):
@@ -43,43 +37,8 @@ def main(argv):
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
 
-    # Create data_dict containing metadata of dataset
-    data_dict = get_data_shape(X_train, X_test, X_val)
-    no_of_dim = data_dict['no_of_dim']
-
-    # Prepare Theano variables for inputs and targets
-    if no_of_dim == 2: input_var = T.tensor('inputs')
-    elif no_of_dim == 3: input_var = T.tensor3('inputs')
-    elif no_of_dim == 4: input_var = T.tensor4('inputs')
-    target_var = T.ivector('targets')
-
-    # Create model and check if model already exists
-    network, model_exist_flag = model_creator(model_dict, data_dict, input_var,
-                                              target_var)
-
-    # Defining symbolic variable for network output
-    prediction = lasagne.layers.get_output(network)
-    # Defining symbolic variable for network parameters
-    params = lasagne.layers.get_all_params(network, trainable=True)
-    # Defining symbolic variable for network output with dropout disabled
-    test_prediction = lasagne.layers.get_output(network, deterministic=True)
-
-    # Building or loading model depending on existence
-    if model_exist_flag == 1:
-        # Load the correct model:
-        param_values = model_loader(model_dict)
-        lasagne.layers.set_all_param_values(network, param_values)
-    elif model_exist_flag == 0:
-        # Launch the training loop
-        print('Starting training...')
-        model_trainer(input_var, target_var, prediction, test_prediction,
-                      params, model_dict, batchsize, X_train, y_train, X_val,
-                      y_val, network)
-        model_saver(network, model_dict)
-
-    # Checking performance on test set
-    test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
-                    y_test)
+    data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
+        model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)
 
     # Running attack and saving samples
     print('Creating adversarial samples...')
@@ -94,9 +53,9 @@ def main(argv):
     if defense != None:
         for rd in rd_list:
             if defense == 'recons':
-                recons_defense(model_dict, input_var, target_var, test_prediction,
-                               dev_list, adv_x_ini, rd, X_train, y_train, X_test,
-                               y_test)
+                recons_defense(model_dict, data_dict, input_var, target_var,
+                               test_prediction, dev_list, adv_x_ini, rd,
+                               X_train, y_train, X_test, y_test)
             elif defense == 'retrain':
                 retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
                                 y_train, X_test, y_test, X_val, y_val)
