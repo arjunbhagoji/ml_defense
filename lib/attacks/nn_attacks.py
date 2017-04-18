@@ -36,8 +36,8 @@ def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
     delta_x_sign = np.sign(delta_x)
     if rd == None or rev != None: # Clipping if in pixel space
         adv_x[b_c*batch_len:(b_c + 1)*batch_len] = np.clip(x_curr +
-                                                   dev_mag*delta_x_sign, 0 , 1)
-    elif rd !=None and rev ==None:
+                                                   dev_mag*delta_x_sign, 0, 1)
+    elif rd != None and rev == None:
         adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
 #------------------------------------------------------------------------------#
 
@@ -82,7 +82,8 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
                     adv_x[b_c*batch_len + i, j] = np.clip(x_curr[i, j] + dev_mag
                                     *(delta_x[i, j]/delta_x_norm[i, j]), 0, 1)
                 elif rd != None and rev == None:
-                    adv_x[b_c*batch_len + i, j] = x_curr[i, j] + dev_mag*(delta_x[i, j]/delta_x_norm[i, j])
+                    adv_x[b_c*batch_len + i, j] = (x_curr[i, j]
+                                   + dev_mag*(delta_x[i, j]/delta_x_norm[i, j]))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
