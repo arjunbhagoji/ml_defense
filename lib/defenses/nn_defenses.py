@@ -17,6 +17,7 @@ from ..utils.dr_utils import *
 # Function to implement the reconstruction defense
 def recons_defense(model_dict, data_dict, input_var, target_var, test_prediction,
                    dev_list, adv_x_ini, rd, X_train, y_train, X_test, y_test):
+                   
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts

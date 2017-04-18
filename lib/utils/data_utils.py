@@ -1,3 +1,9 @@
+"""
+This utility file contains functions that deal with input, output, visual data
+of the program. It contains functions that parse arguments, load and parse
+datasets, save outputs, save images, etc.
+"""
+
 import sys, os, argparse
 import numpy as np
 import pickle
@@ -179,6 +185,12 @@ def load_dataset_GTSRB(model_dict):
         return tuple(map(lambda c: dataset[c], columns))
 
     def preprocess(X, channels):
+
+        """
+        Preprocess dataset: turn images into grayscale if specified, normalize
+        input space to [0,1], reshape array to appropriate shape for NN model
+        """
+
         if channels == 3:
             # Scale features to be in [0, 1]
             X = (X/255.).astype(np.float32)
@@ -271,6 +283,12 @@ def get_data_shape(X_train, X_test, X_val=None):
 
 #------------------------------------------------------------------------------#
 def reshape_data(X, data_dict, rd=None, rev=None):
+
+    """
+    Reshape data into an appropriate shape based on <data_dict> and <rd>, <rev>
+    flags.
+    """
+
     no_of_dim = data_dict['no_of_dim']
     X_len = len(X)
 
@@ -298,9 +316,13 @@ def reshape_data(X, data_dict, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Saves first 10 images from the test set and their adv. samples
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 dr_alg=None, rev=None):
+
+    """
+    Save <no_of_img> samples as image files in visual_data folder.
+    """
+
     from lib.utils.dr_utils import invert_dr
 
     no_of_img = 1
@@ -333,11 +355,11 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 for i in indices:
                     adv = adv_x_rev[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    img.imsave(abs_path_v+'{}_{}_{}_{}_mag{}.png'.format(atk,
-                        i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
-                        cmap='gray')
-                    img.imsave(abs_path_v+'{}_{}_{}_orig.png'.format(i, DR,
-                                rd), orig*255, vmin=0, vmax=255, cmap='gray')
+                    img.imsave(abs_path_v + '{}_{}_{}_{}_mag{}.png'.format(atk,
+                               i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
+                               cmap='gray')
+                    img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR,
+                               rd), orig*255, vmin=0, vmax=255, cmap='gray')
 
             elif rd == None or rev != None:
                 adv_x_curr = adv_x[indices,:,dev_count]
@@ -345,12 +367,12 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                     adv = adv_x_curr[i].reshape((height,width))
                     orig = X_curr[i].reshape((height,width))
                     if rd != None:
-                        fname = abs_path_v+'{}_{}_{}_rev_{}'.format(atk, i,
-                                                                        DR, rd)
+                        fname = abs_path_v +' {}_{}_{}_rev_{}'.format(atk, i,
+                                                                      DR, rd)
                     elif rd == None:
-                        fname = abs_path_v+'{}_{}'.format(atk, i)
+                        fname = abs_path_v + '{}_{}'.format(atk, i)
                     img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
-                                                vmin=0, vmax=255, cmap='gray')
+                                                  vmin=0, vmax=255, cmap='gray')
                     img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
                                                                     cmap='gray')
             dev_count += 1
@@ -361,7 +383,13 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def utility_write(model_dict,test_acc,test_conf,rd,rev):
+def utility_write(model_dict, test_acc, test_conf, rd, rev):
+
+    """
+    Write utility (accuracy and confidence on test set) of the model on a file.
+    The output file is saved in output_data folder.
+    """
+
     model_name = model_dict['model_name']
     if model_name in ('mlp', 'custom'):
         depth = model_dict['depth']
@@ -372,23 +400,24 @@ def utility_write(model_dict,test_acc,test_conf,rd,rev):
 
     abs_path_o = resolve_path_o(model_dict)
     ofile = open(abs_path_o + fname, 'a')
-    DR=model_dict['dim_red']
+    DR = model_dict['dim_red']
     if rd == None:
-        ofile.write('No_'+DR+':\t')
+        ofile.write('No_' + DR + ':\t')
     else:
-        if rev == None: ofile.write(DR+'_{}: '.format(rd))
-        else: ofile.write(DR+'_rev {}:\t'.format(rd))
+        if rev == None: ofile.write(DR + '_{}: '.format(rd))
+        else: ofile.write(DR + '_rev {}:\t'.format(rd))
     ofile.write('{:.3f}, {:.3f}\n'.format(test_acc, test_conf))
     ofile.close()
 #------------------------------------------------------------------------------#
 
-
 #------------------------------------------------------------------------------#
 def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
+
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type, strat, and rev
     """
+
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
 

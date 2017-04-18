@@ -51,6 +51,12 @@ def mult_cls_atk(clf, X_test, dev_mag, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 def main(argv):
 
+    """
+    Main function to run strategic_svm.py. Set up SVM classifier, perform
+    and evaluate attack, deploy defense and perform strategic attack. Resutls
+    and adv. sample images are also saved on each task.
+    """
+
     # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
     DR = model_dict['dim_red']
@@ -127,6 +133,9 @@ def main(argv):
                 save_svm_images(model_dict, n_features, X_test_dr, X_adv,
                                     dev_list[i], rd, dr_alg)
         print_svm_output(model_dict, output_list, dev_list, rd, strat_flag=1)
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 if __name__ == "__main__":
    main(sys.argv[1:])
+ #------------------------------------------------------------------------------#

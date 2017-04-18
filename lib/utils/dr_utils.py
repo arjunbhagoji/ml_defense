@@ -1,3 +1,8 @@
+"""
+Utility file containing helper functions that perform various dimensionality
+reduction technique.
+"""
+
 from sklearn.decomposition import PCA
 from sklearn.random_projection import GaussianRandomProjection as GRP
 
@@ -56,6 +61,11 @@ def random_proj_dr(X_train, X_test, rd, rev=None):
 
 #------------------------------------------------------------------------------#
 def invert_dr(X, dr_alg, DR):
+
+    """
+    Inverse transform data <X> in reduced dimension back to its full dimension
+    """
+
     if DR == 'pca':
         X_rev = dr_alg.inverse_transform(X)
 
@@ -70,6 +80,7 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
     """
     A wrapper function for dimensionality reduction functions.
     """
+
     data_dict = get_data_shape(X_train, X_test, X_val)
     no_of_dim = data_dict['no_of_dim']
 
@@ -94,6 +105,7 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
         else:
             X_train, X_test, dr_alg = pca_dr(DR_in_train, DR_in_test, rd,
                                              DR_in_val, rev)
+
     #----------------------------- Random Projection --------------------------#
     elif DR == 'rp':
         if X_val is not None:

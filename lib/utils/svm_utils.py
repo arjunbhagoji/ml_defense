@@ -86,6 +86,12 @@ def resolve_path_v(model_dict):
 
 #------------------------------------------------------------------------------#
 def svm_model_dict_create():
+
+    """
+    Parse arguments to strategic_svm.py and create model_dict containing the
+    parameters
+    """
+
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-st','--svm_type', default='linear', type=str,
@@ -313,6 +319,10 @@ def print_svm_output(model_dict, output_list, dev_list, rd=None, strat_flag=None
 def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
                     dr_alg=None, rev=None):
 
+    """
+    Save <no_of_img> adv. samples as image files in visual_data folder
+    """
+
     no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
@@ -336,25 +346,24 @@ def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))
                 orig = X_curr_rev[i].reshape((height, width))
-                img.imsave(abs_path_v+'{}_{}_{}_mag{}.png'.format(
-                     i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
-                    cmap='gray')
-                img.imsave(abs_path_v+'{}_{}_{}_orig.png'.format(
-                    i, DR, rd), orig*255, vmin=0, vmax=255, cmap='gray')
+                img.imsave(abs_path_v + '{}_{}_{}_mag{}.png'.format(i, DR, rd,
+                           dev_mag), adv*255, vmin=0, vmax=255, cmap='gray')
+                img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
+                           orig*255, vmin=0, vmax=255, cmap='gray')
 
         elif rd == None or rev != None:
             adv_x_curr = adv_x[indices,:]
             for i in indices:
-                adv = adv_x_curr[i].reshape((height,width))
-                orig = X_curr[i].reshape((height,width))
+                adv = adv_x_curr[i].reshape((height, width))
+                orig = X_curr[i].reshape((height, width))
                 if rd != None:
-                    fname = abs_path_v+'{}_{}_rev_{}'.format(i, DR, rd)
+                    fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
                 elif rd == None:
-                    fname = abs_path_v+'{}'.format(i)
+                    fname = abs_path_v + '{}'.format(i)
                 img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
-                                            vmin=0, vmax=255, cmap='gray')
+                           vmin=0, vmax=255, cmap='gray')
                 img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
-                                                                cmap='gray')
+                           cmap='gray')
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)

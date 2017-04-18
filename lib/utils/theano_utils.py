@@ -10,18 +10,24 @@ from lasagne.regularization import l2, l1
 from lib.utils.data_utils import *
 
 #------------------------------------------------------------------------------#
-# Function to predict network output
 def predict_fn(input_var, test_prediction):
+
+    """Function to predict network output"""
+
     return theano.function([input_var], T.argmax(test_prediction, axis=1),
                            allow_input_downcast=True)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Function to calculate gradient at given data point. Note that the gradient
-# in the FSG method attack is taken with respect to the true label.
-# The recently discovered 'label leaking' phenomenon can be corrected by taking
-# the loss with respect to the predicted label.
 def grad_fn(input_var, target_var, test_prediction):
+
+    """
+    Function to calculate gradient at given data point. Note that the gradient
+    in the FSG method attack is taken with respect to the true label.
+    The recently discovered 'label leaking' phenomenon can be corrected by
+    taking the loss with respect to the predicted label.
+    """
+
     test_loss = loss_fn(test_prediction, target_var)
     req_gradient = T.grad(test_loss, input_var)
     return theano.function([input_var, target_var], req_gradient,
@@ -29,8 +35,10 @@ def grad_fn(input_var, target_var, test_prediction):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Function to go over minibatches required for training
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
+
+    """Function to go over minibatches required for training"""
+
     assert len(inputs) == len(targets)
     if shuffle:
         indices = np.arange(len(inputs))
@@ -44,9 +52,13 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Create a loss expression for training, i.e., a scalar objective we want
-# to minimize (for our multi-class problem, it is the cross-entropy loss):
 def loss_fn(model_predict, target_var, reg=None, network=None):
+
+    """
+    Create a loss expression for training, i.e., a scalar objective we want
+    to minimize (for our multi-class problem, it is the cross-entropy loss)
+    """
+
     loss_temp = lasagne.objectives.categorical_crossentropy(model_predict,
                                                             target_var)
     loss_temp = loss_temp.mean()
@@ -65,12 +77,21 @@ def loss_fn(model_predict, target_var, reg=None, network=None):
 
 #------------------------------------------------------------------------------#
 def acc_fn(model_predict, target_var):
+
+    """Theano function to calculate accuracy of input data"""
+
     return T.mean(T.eq(T.argmax(model_predict, axis=1), target_var),
                        dtype=theano.config.floatX)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 def index_fn(model_predict, input_var, target_var):
+
+    """
+    Theano function returns an array containing boolean values that indicate
+    whether predicted label matches target_var
+    """
+
     index_temp = T.eq(T.argmax(model_predict, axis=1), target_var)
     return theano.function([input_var,target_var], index_temp,
                            allow_input_downcast=True)
@@ -78,20 +99,30 @@ def index_fn(model_predict, input_var, target_var):
 
 #------------------------------------------------------------------------------#
 def val_fn(input_var, target_var, test_loss, test_acc):
+
+    """Theano function returns total loss and accuracy"""
+
     return theano.function([input_var, target_var], [test_loss, test_acc],
                            allow_input_downcast=True)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 def conf_fn(input_var, model_predict):
+
+    """Theano function to calculate average confidence on input data"""
+
     conf_temp = T.mean(T.max(model_predict, axis=1), dtype=theano.config.floatX)
-    # conf_temp=conf_temp.mean()
-    return theano.function([input_var],conf_temp, allow_input_downcast=True)
+    return theano.function([input_var], conf_temp, allow_input_downcast=True)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 def model_trainer(input_var, target_var, prediction, test_prediction, params,
-                 model_dict, X_train, y_train, X_val, y_val, network):
+                  model_dict, X_train, y_train, X_val, y_val, network):
+
+    """
+    Train NN model with (X_train, y_train) and output training loss, validation
+    loss and validation accuracy for (X_val, y_val) at every epoch.
+    """
 
     rate = model_dict['rate']
     num_epochs = model_dict['num_epochs']
@@ -156,6 +187,12 @@ def model_trainer(input_var, target_var, prediction, test_prediction, params,
 #------------------------------------------------------------------------------#
 def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
                     y_test, rd=None, rev=None):
+
+    """
+    Evaluate accuracy and confidence of NN model on (X_test, y_test). Result is
+    printed on a corresponding utility output file saved in nn_output_data
+    folder.
+    """
 
     test_loss = loss_fn(test_prediction, target_var)
     test_acc = acc_fn(test_prediction, target_var)

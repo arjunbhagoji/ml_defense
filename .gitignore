@@ -8,6 +8,7 @@
 /svm_output_data
 /svm_visual_data
 /plots
+/.ipynb_checkpoints
 *.pyc
 *.zip
 *.pem

@@ -16,6 +16,11 @@ from lib.attacks.nn_attacks import *
 def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
                      X_val=None, y_val=None):
 
+    """
+    Helper function called by main() to setup NN model, attack it, print results
+    and save adv. sample images.
+    """
+
     # Parameters
     rev_flag = None
     dim_red = model_dict['dim_red']
@@ -43,6 +48,11 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
 #-----------------------------------------------------------------------------#
 def main():
 
+    """
+    Main function to run strategic_attack_demo.py. It parses arguments, loads
+    dataset and then calls strategic_attack() helper function.
+    """
+
     # Create model_dict from arguments
     model_dict = model_dict_create()
 
@@ -60,7 +70,8 @@ def main():
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
 
-    # partial_strategic_attack=partial(strategic_attack,X_train=X_train,y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)
+    # partial_strategic_attack=partial(strategic_attack,X_train=X_train,
+    # y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)
 
     for rd in rd_list:
         # partial_strategic_attack(rd)
