@@ -28,7 +28,7 @@ def pca_dr(X_train, X_test, rd, X_val=None, rev=None):
         if X_val is not None:
             X_val_rev = pca.inverse_transform(X_val_dr)
             return X_train_rev, X_test_rev, X_val_rev, pca
-        else: return X_test_rev, X_test_rev, pca
+        else: return X_train_rev, X_test_rev, pca
     elif rev == None:
         if X_val is not None: return X_train_dr, X_test_dr, X_val_dr, pca
         else: return X_train_dr, X_test_dr, pca
@@ -70,7 +70,6 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
     """
     A wrapper function for dimensionality reduction functions.
     """
-
     data_dict = get_data_shape(X_train, X_test, X_val)
     no_of_dim = data_dict['no_of_dim']
 
