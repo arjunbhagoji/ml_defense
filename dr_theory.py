@@ -9,76 +9,55 @@ from lib.utils.data_utils import *
 from lib.utils.dr_utils import *
 from lib.utils.attack_utils import *
 from lib.utils.plot_utils import *
+from lib.utils.model_utils import *
 
-def gradient_calc(rd,X_train,y_train,X_test,y_test,X_val,y_val):
+def gradient_calc(rd, model_dict, X_train, y_train, X_test, y_test, X_val, y_val):
 
-        input_var = T.tensor3('inputs')
-        target_var = T.ivector('targets')
+    # Parameters
+    rev_flag = None
+    dim_red = model_dict['dim_red']
 
-        network,model_exist_flag,model_dict=model_creator(input_var,target_var,rd)
+    data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
+        model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val,
+                    rd, rev=rev_flag)
 
-        #Defining symbolic variable for network output
-        prediction = lasagne.layers.get_output(network)
-        #Defining symbolic variable for network parameters
-        params = lasagne.layers.get_all_params(network, trainable=True)
-        #Defining symbolic variable for network output with dropout disabled
-        test_prediction = lasagne.layers.get_output(network, deterministic=True)
+    test_len = data_dict['test_len']
+    no_of_features = data_dict['no_of_features']
+    X_test_dr = X_test.reshape((test_len, no_of_features))
 
-        print("Doing PCA with rd={} over the training data".format(rd))
+    var_array = np.sqrt(np.var(X_test, axis=0))
+    var_list = list(var_array)
+    gradient_comp = avg_grad_calc(input_var, target_var, test_prediction,
+                                  X_test, y_test)
+    gradient_list = list(gradient_comp)
 
-        X_train_dr,X_test_dr,pca=pca_dr(X_train,X_test,rd)
-        test_len=len(X_test)
-        X_val=X_val.reshape(test_len,784)
-        X_val_dr=pca.transform(X_val).reshape((test_len,1,rd))
-
-        # Fixing batchsize
-        batchsize=500
-        p_flag=1
-        no_of_mags=50
-
-        # Building or loading model depending on existence
-        if model_exist_flag==1:
-            # Load the correct model:
-            param_values=model_loader(model_dict,rd)
-            lasagne.layers.set_all_param_values(network, param_values)
-        elif model_exist_flag==0:
-            # Launch the training loop.
-            print("Starting training...")
-            model_trainer(input_var,target_var,prediction,test_prediction,params,
-                        model_dict,batchsize,X_train_dr,y_train,X_val_dr,y_val)
-            model_saver(network,model_dict,rd)
-
-        # Evaluating on retrained inputs
-        test_model_eval(model_dict,input_var,target_var,test_prediction,
-                            X_test_dr,y_test,rd)
-
-        var_array=np.sqrt(np.var(X_train_dr,axis=0))
-        var_list=list(var_array)
-        gradient_comp=avg_grad_calc(input_var,target_var,test_prediction,
-                                    X_test_dr,y_test)
-        gradient_list=list(gradient_comp)
-
-        return zip(var_list, gradient_list)
-
-
+    return zip(var_list, gradient_list)
 
 def main():
 
-    print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    # Create model_dict from arguments
+    model_dict = model_dict_create()
 
-    rd_list=[784,331,200,100,90,80,70,60,50,40,30,20,10]
+    # Reduced dimensions used
+    # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    rd_list = [784, 331]
+
+    # Load dataset specified in model_dict
+    print('Loading data...')
+    dataset = model_dict['dataset']
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+        X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+    elif dataset == 'HAR':
+        X_train, y_train, X_test, y_test = load_dataset(model_dict)
+
     no_of_dims=len(rd_list)
 
     gradient_var_list=[]
 
     for rd in rd_list:
-        gradient_var_list.append(gradient_calc(rd,X_train,y_train,X_test,y_test,
-                                    X_val,y_val))
-    mag_var_scatter(gradient_var_list,no_of_dims)
-
-
-
+        gradient_var_list.append(gradient_calc(rd, model_dict, X_train, y_train,
+                                 X_test, y_test, X_val, y_val))
+    mag_var_scatter(gradient_var_list, no_of_dims)
 
 if __name__ == "__main__":
     main()
