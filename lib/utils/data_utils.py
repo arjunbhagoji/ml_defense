@@ -31,6 +31,8 @@ def model_dict_create():
                         help='Specify dimension reduction scheme')
     parser.add_argument('-r', '--reg', default=None, type=str,
                         help='Specify type of regularization to use')
+    parser.add_argument('-b', '--batchsize', default=500, type=int,
+                        help='Specify batchsize to use')
     args = parser.parse_args()
 
     model_dict = {}
@@ -44,6 +46,7 @@ def model_dict_create():
     model_dict.update({'num_epochs':args.n_epoch})
     model_dict.update({'dim_red':args.dim_red})
     model_dict.update({'reg':args.reg})
+    model_dict.update({'batchsize':args.batchsize})
 
     # Determine output size
     dataset = model_dict['dataset']
