@@ -3,6 +3,8 @@ import numpy as np
 
 from lib.utils.data_utils import *
 from lib.utils.lasagne_utils import *
+from lib.utils.theano_utils import *
+from lib.utils.dr_utils import *
 
 #------------------------------------------------------------------------------#
 def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
@@ -83,7 +85,7 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None, DR=None,  rev=None):
+def model_loader(model_dict, rd=None, DR=None, rev=None):
 
     model_name = model_dict['model_name']
     abs_path_m = resolve_path_m(model_dict)
@@ -135,4 +137,56 @@ def model_saver(network, model_dict, rd=None, rev=None):
     if reg != None: model_path += '_reg_{}'.format(reg)
     if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
+                y_val=None, rd=None, rev=None):
+    dim_red = model_dict['dim_red']
+    if rd != None:
+        # Doing dimensionality reduction on dataset
+        print("Doing {} with rd={} over the training data".format(dim_red, rd))
+        X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red,
+                                                    rd, X_val, rev)
+    else: dr_alg = None
+
+    # Getting data parameters after dimensionality reduction
+    data_dict = get_data_shape(X_train, X_test, X_val)
+    no_of_dim = data_dict['no_of_dim']
+
+    # Prepare Theano variables for inputs and targets
+    if no_of_dim == 2: input_var = T.tensor('inputs')
+    elif no_of_dim == 3: input_var = T.tensor3('inputs')
+    elif no_of_dim == 4: input_var = T.tensor4('inputs')
+    target_var = T.ivector('targets')
+
+    # Check if model already exists
+    network, model_exist_flag = model_creator(model_dict, data_dict, input_var,
+                                              target_var, rd, rev)
+
+    #Defining symbolic variable for network output
+    prediction = lasagne.layers.get_output(network)
+    #Defining symbolic variable for network parameters
+    params = lasagne.layers.get_all_params(network, trainable=True)
+    #Defining symbolic variable for network output with dropout disabled
+    test_prediction = lasagne.layers.get_output(network, deterministic=True)
+
+    # Building or loading model depending on existence
+    if model_exist_flag == 1:
+        # Load the correct model:
+        param_values = model_loader(model_dict, rd, dim_red, rev)
+        lasagne.layers.set_all_param_values(network, param_values)
+    elif model_exist_flag == 0:
+        # Launch the training loop.
+        print("Starting training...")
+        model_trainer(input_var, target_var, prediction, test_prediction,
+                      params, model_dict, X_train, y_train,
+                      X_val, y_val, network)
+        model_saver(network, model_dict, rd, rev)
+
+    # Evaluating on retrained inputs
+    test_model_eval(model_dict, input_var, target_var, test_prediction,
+                    X_test, y_test, rd, rev)
+
+    return data_dict, test_prediction, dr_alg, X_test, input_var, target_var
 #------------------------------------------------------------------------------#
