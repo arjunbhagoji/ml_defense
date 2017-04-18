@@ -2,12 +2,11 @@ import os,sys
 import numpy as np
 import theano
 import theano.tensor as T
-import time
-from os.path import dirname
-
 import lasagne
-from lasagne.regularization import l2, l1
+import time
 
+from os.path import dirname
+from lasagne.regularization import l2, l1
 from lib.utils.data_utils import *
 
 #------------------------------------------------------------------------------#
@@ -92,10 +91,11 @@ def conf_fn(input_var, model_predict):
 
 #------------------------------------------------------------------------------#
 def model_trainer(input_var, target_var, prediction, test_prediction, params,
-                 model_dict, batchsize, X_train, y_train, X_val, y_val, network):
+                 model_dict, X_train, y_train, X_val, y_val, network):
 
     rate = model_dict['rate']
     num_epochs = model_dict['num_epochs']
+    batchsize = model_dict['batchsize']
 
     if model_dict['reg'] == None:
         loss = loss_fn(prediction, target_var)
@@ -130,25 +130,27 @@ def model_trainer(input_var, target_var, prediction, test_prediction, params,
             inputs, targets = batch
             train_err += train_fn(inputs, targets)
             train_batches += 1
+        if X_val != None:
         # And a full pass over the validation data:
-        val_err = 0
-        val_acc = 0
-        val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, batchsize,
-                                         shuffle=False):
-            inputs, targets = batch
-            err, acc = validator(inputs, targets)
-            val_err += err
-            val_acc += acc
-            val_batches += 1
+            val_err = 0
+            val_acc = 0
+            val_batches = 0
+            for batch in iterate_minibatches(X_val, y_val, batchsize,
+                                             shuffle=False):
+                inputs, targets = batch
+                err, acc = validator(inputs, targets)
+                val_err += err
+                val_acc += acc
+                val_batches += 1
 
         # Then we print the results for this epoch:
         print("Epoch {} of {} took {:.3f}s".format(
               epoch + 1, num_epochs, time.time() - start_time))
         print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
-        print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
-        print("  validation accuracy:\t\t{:.2f} %".format(
-              val_acc / val_batches * 100))
+        if X_val != None:
+            print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
+            print("  validation accuracy:\t\t{:.2f} %".format(
+                  val_acc / val_batches * 100))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
