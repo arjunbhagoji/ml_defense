@@ -22,7 +22,7 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     """
 
     # Parameters
-    rev_flag = None
+    rev_flag = 1
     dim_red = model_dict['dim_red']
 
     data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
@@ -40,7 +40,7 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
                  rev=rev_flag, strat_flag=1)
 
     # Save adv. samples to images
-    if (dim_red == 'pca') or (dim_red == None):
+    if (dim_red == 'pca') or (dim_red == 'dca') or (dim_red == None):
         save_images(model_dict, data_dict, X_test, adv_x_all, dev_list,
                     rd, dr_alg, rev=rev_flag)
 #-----------------------------------------------------------------------------#
@@ -76,7 +76,7 @@ def main():
     for rd in rd_list:
         # partial_strategic_attack(rd)
         strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test,
-                            y_test, X_val, y_val)
+                         y_test, X_val, y_val)
 
     # partial_strategic_attack(784)
     # pool=multiprocessing.Pool(processes=8)

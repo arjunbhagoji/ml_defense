@@ -292,7 +292,7 @@ def file_create(model_dict, rd, strat_flag=None):
     abs_path_o = resolve_path_o(model_dict)
     fname = get_model_name(model_dict)
     if strat_flag != None: fname += '_strat'
-    if rd != None: fname += '_'+model_dict['dim_red']
+    if rd != None: fname += ('_' + model_dict['dim_red'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
 #------------------------------------------------------------------------------#
@@ -323,24 +323,24 @@ def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
     Save <no_of_img> adv. samples as image files in visual_data folder
     """
 
-    no_of_img = 5
+    no_of_img = 1
     indices = range(no_of_img)
     X_curr = X_test[indices]
     # channels = X_curr.shape[1]
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    abs_path_v=resolve_path_v(model_dict)
-    if rd != None and rev == None:
+    abs_path_v = resolve_path_v(model_dict)
+    if (rd != None) and (rev == None):
         height = int(np.sqrt(n_features))
         width = height
         X_curr_rev = dr_alg.inverse_transform(X_curr)
-    elif rd == None or (rd != None and rev != None):
+    elif (rd == None) or (rd != None and rev != None):
         height = X_test.shape[2]
         width = X_test.shape[3]
 
     channels = 1
     if channels == 1:
-        if rd != None and rev == None:
+        if (rd != None) and (rev == None):
             adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:])
             np.clip(adv_x_curr, 0, 1)
             for i in indices:
@@ -351,7 +351,7 @@ def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
                 img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
                            orig*255, vmin=0, vmax=255, cmap='gray')
 
-        elif rd == None or rev != None:
+        elif (rd == None) or (rev != None):
             adv_x_curr = adv_x[indices,:]
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))

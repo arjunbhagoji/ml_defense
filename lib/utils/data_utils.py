@@ -334,21 +334,21 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     DR = model_dict['dim_red']
     abs_path_v = resolve_path_v(model_dict)
 
-    if rd != None and rev == None:
+    if (rd != None) and (rev == None):
         X_curr = invert_dr(X_curr, dr_alg, DR)
         features_per_c = X_curr.shape[-1]
         height = int(np.sqrt(features_per_c))
         width = height
         X_curr_rev = X_curr.reshape((no_of_img, channels, height, width))
-    elif rd == None or (rd != None and rev != None):
+    elif (rd == None) or (rd != None and rev != None):
         height = data_dict['height']
         width = data_dict['width']
 
     if channels == 1:
-        dev_count=0
+        dev_count = 0
         for dev_mag in dev_list:
             adv_curr = adv_x[indices,:,dev_count]
-            if rd != None and rev == None:
+            if (rd != None) and (rev == None):
                 adv_x_rev = invert_dr(adv_curr, dr_alg, DR)
                 adv_x_rev = adv_x_rev.reshape((no_of_img, channels, height, width))
                 np.clip(adv_x, 0, 1)
@@ -361,7 +361,7 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                     img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR,
                                rd), orig*255, vmin=0, vmax=255, cmap='gray')
 
-            elif rd == None or rev != None:
+            elif (rd == None) or (rev != None):
                 adv_x_curr = adv_x[indices,:,dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height,width))
