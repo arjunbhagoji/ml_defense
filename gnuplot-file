@@ -121,3 +121,28 @@ set key right bottom
 set title 'Strategic FGS Attack on NN'
 
 plot for [IDX=0:6] 'output_data/MNIST/fgs_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output 'plots/svm_linear_cls10_l2_pca_rev.png'
+
+set xlabel '\small{Average minimum adversarial perturbation}'
+set ylabel '\small{Accuracy on benign data}'
+set xrange [0:2.0]
+set yrange [60:100]
+# set margins 3, 1, 2, 2
+# set key right bottom
+set title 'MNIST Linear SVM accuracy/robustness tradeoff'
+
+plot for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 1 ps 2 offset character 0,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-01_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 2 ps 2 offset character 1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-02_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 3 ps 2 offset character -1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-03_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 4 ps 2 offset character 0,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-04_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 5 ps 2 offset character -1,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-05_pca_rev.txt' i (3*IDX) u 3:2:1 w labels point ls 6 ps 2 offset character 1,character 1 notitle, \
+1e20 w points ls 1 ps 2 title '1e+00', \
+1e20 w points ls 2 ps 2 title '1e-01', \
+1e20 w points ls 3 ps 2 title '1e-02', \
+1e20 w points ls 4 ps 2 title '1e-03', \
+1e20 w points ls 5 ps 2 title '1e-04', \
+1e20 w points ls 6 ps 2 title '1e-05'
