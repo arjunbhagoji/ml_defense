@@ -60,7 +60,6 @@ def invert_dr(X, dr_alg, DR):
         X_rev = dr_alg.inverse_transform(X)
 
     return X_rev
-
 #------------------------------------------------------------------------------#
 
 

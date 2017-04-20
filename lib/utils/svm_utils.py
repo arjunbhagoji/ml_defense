@@ -5,6 +5,9 @@ from sklearn import svm
 from sklearn.externals import joblib
 from matplotlib import image as img
 
+from lib.utils.dr_utils import invert_dr
+from lib.attacks.svm_attacks import min_dist_calc
+
 #------------------------------------------------------------------------------#
 def resolve_path_m(model_dict):
 
@@ -132,18 +135,18 @@ def get_model_name(model_dict, rd=None, rev=None):
     """
 
     if rd == None:
-        model_name = 'svm_{}_cls{}_{}_C{}'.format(model_dict['svm_type'],
+        model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(model_dict['svm_type'],
                                                   model_dict['classes'],
                                                   model_dict['penalty'],
                                                   model_dict['penconst'])
     elif rd != None and rev == None:
-        model_name = 'svm_{}_cls{}_{}{}_{}_C{}'.format(model_dict['svm_type'],
+        model_name = 'svm_{}_cls{}_{}{}_{}_C{:.0e}'.format(model_dict['svm_type'],
                                                       model_dict['classes'],
                                                       model_dict['dim_red'], rd,
                                                       model_dict['penalty'],
                                                       model_dict['penconst'])
     elif rd != None and rev != None:
-        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{}'.format(model_dict['svm_type'],
+        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{:.0e}'.format(model_dict['svm_type'],
                                                       model_dict['classes'],
                                                       model_dict['dim_red'], rd,
                                                       model_dict['penalty'],
@@ -211,7 +214,7 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_tester(model_dict, clf, X_test, y_test):
+def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
 
     """
     Calculate model's accuracy and average normalized distance from correctly
@@ -235,16 +238,26 @@ def model_tester(model_dict, clf, X_test, y_test):
         if predicted_labels[i] == y_test[i]:
             n_correct += 1
             # Sum normalized distance to sept. hyperplane
-            sum_dist += dist[i,y_test[i]] / norm[y_test[i]]
+            min_index, min_dist = min_dist_calc(X_test[i], clf)
+            sum_dist += min_dist
+            # sum_dist += dist[i,y_test[i]] / norm[y_test[i]]
 
+    DR = model_dict['dim_red']
     # Resolve path to utility output file
     abs_path_o = resolve_path_o(model_dict)
     fname = 'utility_' + get_model_name(model_dict)
-    plotfile = open(abs_path_o + fname + '.txt', 'a')
-    # Format: <dimensions> <accuracy> <avg. dist.>
-    plotfile.write('{} {:.2f} {:.3f}\n'.format(X_test.shape[1],
-                                               float(n_correct)/test_len*100,
+    if rd != None: fname += '_' + DR
+    if rev != None: fname += '_rev'
+    ofile = open(abs_path_o + fname + '.txt', 'a')
+    DR=model_dict['dim_red']
+    if rd == None:
+        ofile.write('No_'+DR+' ')
+    else:
+        ofile.write( str(rd) + ' ')
+# Format: <dimensions> <accuracy> <avg. dist.>
+    ofile.write('{:.2f} {:.3f}'.format(float(n_correct)/test_len*100,
                                                sum_dist/n_correct))
+    ofile.write('\n\n')
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -275,7 +288,7 @@ def acc_calc_all(clf, X_adv, y_test, y_ini):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def file_create(model_dict, rd, strat_flag=None):
+def file_create(model_dict, rd, strat=None, rev=None):
 
     """
     Creates and returns a file descriptor, named corresponding to model,
@@ -285,20 +298,22 @@ def file_create(model_dict, rd, strat_flag=None):
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
     fname = get_model_name(model_dict)
-    if strat_flag != None: fname += '_strat'
+    if strat != None: fname += '_strat'
     if rd != None: fname += '_'+model_dict['dim_red']
+    if rev != None: fname += '_rev'
     plotfile = open(abs_path_o + fname + '.txt', 'a')
-    return plotfile
+    return plotfile, fname
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def print_svm_output(model_dict, output_list, dev_list, rd=None, strat_flag=None):
+def print_svm_output(model_dict, output_list, dev_list, rd=None,
+                    strat=None, rev=None):
 
     """
     Creates an output file reporting accuracy and confidence of attack
     """
 
-    plotfile = file_create(model_dict, rd, strat_flag)
+    plotfile, fname = file_create(model_dict, rd, strat, rev)
     plotfile.write('\\\\small{{{}}}\n'.format(rd))
     for i in range(len(dev_list)):
         plotfile.write('{0:.3f}'.format(dev_list[i]))
@@ -307,31 +322,32 @@ def print_svm_output(model_dict, output_list, dev_list, rd=None, strat_flag=None
         plotfile.write('\n')
     plotfile.write('\n\n')
     plotfile.close()
+    return fname
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
+def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
                     dr_alg=None, rev=None):
 
     no_of_img = 5
     indices = range(no_of_img)
     X_curr = X_test[indices]
-    # channels = X_curr.shape[1]
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    abs_path_v=resolve_path_v(model_dict)
+    abs_path_v = resolve_path_v(model_dict)
+    no_of_features = data_dict['no_of_features']
+    height = int(np.sqrt(no_of_features))
+    width = height
     if rd != None and rev == None:
-        height = int(np.sqrt(n_features))
-        width = height
-        X_curr_rev = dr_alg.inverse_transform(X_curr)
-    elif rd == None or (rd != None and rev != None):
-        height = X_test.shape[2]
-        width = X_test.shape[3]
+        X_curr = invert_dr(X_curr, dr_alg, DR)
+    # elif rd == None or (rd != None and rev != None):
+    #     height = X_test.shape[2]
+    #     width = X_test.shape[3]
 
     channels = 1
     if channels == 1:
         if rd != None and rev == None:
-            adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:])
+            adv_x_curr = invert_dr(adv_x[indices,:], dr_alg, DR)
             np.clip(adv_x_curr, 0, 1)
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))

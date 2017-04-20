@@ -74,9 +74,9 @@ def get_model_name(model_dict, rd=None, rev=None):
     DR = model_dict['dim_red']
 
     if model_name == 'mlp' or model_name =='custom':
-        m_name='model_FC_{}_{}'.format(depth, width)
+        m_name='nn_FC_{}_{}'.format(depth, width)
     elif model_name =='cnn':
-        m_name='model_cnn_{}_{}'.format(depth, width)
+        m_name='cnn_{}_{}'.format(depth, width)
 
     reg = model_dict['reg']
     if rd != None: m_name += '_{}_{}'.format(rd, DR)
@@ -361,14 +361,17 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def utility_write(model_dict,test_acc,test_conf,rd,rev):
-    model_name = model_dict['model_name']
-    if model_name in ('mlp', 'custom'):
-        depth = model_dict['depth']
-        width = model_dict['width']
-        fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
-    elif model_name == 'cnn':
-        fname = 'Utility_cnn_papernot.txt'
+def utility_write(model_dict, test_acc, test_conf, rd, rev):
+    # model_name = model_dict['model_name']
+    # if model_name in ('mlp', 'custom'):
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
+    # elif model_name == 'cnn':
+    #     fname = 'Utility_cnn_papernot.txt'
+
+    fname = get_model_name(model_dict)
+    fname = 'Utility_' + fname +'.txt'
 
     abs_path_o = resolve_path_o(model_dict)
     ofile = open(abs_path_o + fname, 'a')
@@ -392,18 +395,21 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
 
-    model_name = model_dict['model_name']
-    DR = model_dict['dim_red']
     fname = model_dict['attack']
+    fname += '_' + get_model_name(model_dict)
+
+    # model_name = model_dict['model_name']
+    DR = model_dict['dim_red']
     reg = model_dict['reg']
-    # MLP model
-    if model_name in ('mlp', 'custom'):
-        depth = model_dict['depth']
-        width = model_dict['width']
-        fname += '_nn_{}_{}'.format(depth, width)
-    # CNN model
-    elif model_name == 'cnn':
-        fname += '_cnn_papernot'
+
+    # # MLP model
+    # if model_name in ('mlp', 'custom'):
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     fname += '_nn_{}_{}'.format(depth, width)
+    # # CNN model
+    # elif model_name == 'cnn':
+    #     fname += '_cnn_papernot'
 
     if strat_flag != None: fname += '_strat'
     if rev != None: fname += '_rev'
