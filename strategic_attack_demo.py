@@ -24,20 +24,20 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
         model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val,
                     rd, rev=rev_flag)
 
-    print ("Starting attack...")
+    # print ("Starting attack...")
     adv_x_all, output_list = attack_wrapper(model_dict, data_dict, input_var,
                                             target_var, test_prediction,
                                             dev_list, X_test, y_test, rd,
                                             rev=rev_flag)
-
-    # Printing result to file
+    #
+    # # Printing result to file
     print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
                  rev=rev_flag, strat_flag=1)
-
-    # Save adv. samples to images
-    if (dim_red == 'pca') or (dim_red == None):
-        save_images(model_dict, data_dict, X_test, adv_x_all, dev_list,
-                    rd, dr_alg, rev=rev_flag)
+    #
+    # # Save adv. samples to images
+    # if (dim_red == 'pca') or (dim_red == None):
+    #     save_images(model_dict, data_dict, X_test, adv_x_all, dev_list,
+    #                 rd, dr_alg, rev=rev_flag)
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#
@@ -47,7 +47,8 @@ def main():
     model_dict = model_dict_create()
 
     # Reduced dimensions used
-    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    rd_list = [784]
     # No. of deviations to consider
     no_of_mags = 50
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
