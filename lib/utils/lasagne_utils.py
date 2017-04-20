@@ -5,10 +5,14 @@ import theano.tensor as T
 import lasagne
 
 #------------------------------------------------------------------------------#
-# Function to create a customizable MLP, with dropout for hidden and input
-# layers
 def build_custom_mlp(in_shape, n_out, input_var=None, activation='sigmoid',
                      DEPTH=2, WIDTH=800, DROP_INPUT=.2, DROP_HIDDEN=.5):
+
+    """
+    Function to create a customizable MLP, with dropout for hidden and input
+    layers using Lasagne.
+    """
+
     # All layers are called network, since only the last one is returned.
     # The function can be modified to return the other layers if regularization
     # is to be performed.
@@ -34,10 +38,15 @@ def build_custom_mlp(in_shape, n_out, input_var=None, activation='sigmoid',
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Function to create a neural network with 2 hidden layers of configurable width
-# . Returns each hidden layer as well, so regularization can be added
+
 def build_hidden_fc(in_shape, n_out, input_var=None, activation='sigmoid',
                     WIDTH=100):
+
+    """
+    Function to create a neural network with 2 hidden layers of configurable
+    width Returns each hidden layer as well, so regularization can be added.
+    """
+
     # Input layer and dropout (with shortcut `dropout` for `DropoutLayer`):
     in_layer = lasagne.layers.InputLayer(shape=in_shape, input_var=input_var)
     # Hidden layers and dropout:
@@ -54,10 +63,14 @@ def build_hidden_fc(in_shape, n_out, input_var=None, activation='sigmoid',
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-# Function to create a CNN according to the specification in Papernot et. al.
-# (2016). This CNN has two convolution + pooling stages and two fully-connected
-# hidden layers in front of the output layer.
 def build_cnn(in_shape, n_out, input_var=None):
+
+    """
+    Function to create a CNN according to the specification in Papernot et. al.
+    (2016). This CNN has two convolution + pooling stages and two
+    fully-connected hidden layers in front of the output layer.
+    """
+
     # Input layer, as usual:
     network = lasagne.layers.InputLayer(shape=in_shape, input_var=input_var)
 
@@ -98,6 +111,13 @@ def build_cnn(in_shape, n_out, input_var=None):
 
 #------------------------------------------------------------------------------#
 def build_cnn_rd(input_var, rd):
+
+    """
+    Function to create a CNN with a similar architecture to the specification in
+    Papernot et. al. (2016), but modified to be used with dimension reduced
+    data. 
+    """
+
     # Input layer, as usual:
     network = lasagne.layers.InputLayer(shape=(None, 1, rd),
                                         input_var=input_var)

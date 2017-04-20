@@ -1,3 +1,9 @@
+"""
+This file contains helper functions that assist in managing NN models including
+creating Lasagne model, loading parameters to model, saving parameters, and
+setting up model.
+"""
+
 import sys, os, argparse
 import numpy as np
 
@@ -9,6 +15,11 @@ from lib.utils.dr_utils import *
 #------------------------------------------------------------------------------#
 def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
                   rev=None):
+
+    """
+    Create a Lasagne model/network as specified in <model_dict> and check
+    whether the model already exists in model folder.
+    """
 
     n_epoch = model_dict['num_epochs']
     dataset = model_dict['dataset']
@@ -87,6 +98,10 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
 #------------------------------------------------------------------------------#
 def model_loader(model_dict, rd=None, DR=None, rev=None):
 
+    """
+    Load parameters of the saved Lasagne model
+    """
+
     model_name = model_dict['model_name']
     abs_path_m = resolve_path_m(model_dict)
 
@@ -115,6 +130,10 @@ def model_loader(model_dict, rd=None, DR=None, rev=None):
 #------------------------------------------------------------------------------#
 def model_saver(network, model_dict, rd=None, rev=None):
 
+    """
+    Save model parameters in model foler as .npz file compatible with Lasagne
+    """
+
     model_name = model_dict['model_name']
     abs_path_m = resolve_path_m(model_dict)
     DR = model_dict['dim_red']
@@ -142,6 +161,11 @@ def model_saver(network, model_dict, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
                 y_val=None, rd=None, rev=None):
+
+    """
+    Main function to set up network (create, load, test, save)
+    """
+
     dim_red = model_dict['dim_red']
     if rd != None:
         # Doing dimensionality reduction on dataset

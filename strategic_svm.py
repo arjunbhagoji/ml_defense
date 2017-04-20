@@ -12,6 +12,12 @@ from lib.attacks.svm_attacks import *
 #------------------------------------------------------------------------------#
 def main(argv):
 
+    """
+    Main function to run strategic_svm.py. Set up SVM classifier, perform
+    and evaluate attack, deploy defense and perform strategic attack. Resutls
+    and adv. sample images are also saved on each task.
+    """
+
     # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
     DR = model_dict['dim_red']
@@ -29,11 +35,11 @@ def main(argv):
     #     X_train = X_train
 
     data_dict = get_data_shape(X_train, X_test)
-    no_of_features = data_dict['no_of_features']
+    n_features = data_dict['no_of_features']
 
     # Reshape dataset to have dimensions suitable for SVM
-    X_train_flat = X_train.reshape(-1, no_of_features)
-    X_test_flat = X_test.reshape(-1, no_of_features)
+    X_train_flat = X_train.reshape(-1, n_features)
+    X_test_flat = X_test.reshape(-1, n_features)
     # X_val_flat= X_val.reshape(-1, no_of_features)
 
     # Create a new model or load an existing one
@@ -84,15 +90,18 @@ def main(argv):
         print('Performing strategic attack...')
         for i in range(n_mag):
             X_adv, y_ini = mult_cls_atk(clf, X_test_dr, dev_list[i], rd,
-                                                                    rev_flag)
+                                        rev_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-            if model_dict['dim_red']=='pca' or model_dict['dim_red']==None:
+            if (DR == 'pca') or (DR == 'dca') or (DR == None):
                 save_svm_images(model_dict, data_dict, X_test_dr, X_adv,
                                     dev_list[i], rd, dr_alg, rev_flag)
         fname = print_svm_output(model_dict, output_list, dev_list, rd, strat_flag,
                          rev_flag)
 
     subprocess.call(["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 if __name__ == "__main__":
    main(sys.argv[1:])
+ #------------------------------------------------------------------------------#

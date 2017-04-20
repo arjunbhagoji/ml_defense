@@ -13,19 +13,52 @@ from ..utils.data_utils import *
 
 #------------------------------------------------------------------------------#
 def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
+
+    """
+    Performs Fast Sign Gradient attack and put perturbed examples in <adv_x>.
+
+    Parameters
+    ----------
+    x_curr   : a batch of input samples
+    y_curr   : a batch of input labels
+    adv_x    : an array to save attack samples
+    dev_mag  : perturbation magnitude
+    b_c      : bactch count
+    gradient : gradient function
+    rd       : dimension reduction flag
+    rev      : inverse transform flag
+    """
+
     batch_len = x_curr.shape[0]
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
     # Sign of gradient
     delta_x_sign = np.sign(delta_x)
     if rd == None or rev != None: # Clipping if in pixel space
-        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = np.clip(x_curr + dev_mag*delta_x_sign, 0 , 1)
-    elif rd !=None and rev ==None:
+        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = np.clip(x_curr +
+                                                   dev_mag*delta_x_sign, 0, 1)
+    elif rd != None and rev == None:
         adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_curr + dev_mag*delta_x_sign
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
+
+    """
+    Performs Fast Gradient attack and put perturbed examples in <adv_x>.
+
+    Parameters
+    ----------
+    x_curr   : a batch of input samples
+    y_curr   : a batch of input labels
+    adv_x    : an array to save attack samples
+    dev_mag  : perturbation magnitude
+    b_c      : bactch count
+    gradient : gradient function
+    rd       : dimension reduction flag
+    rev      : inverse transform flag
+    """
+
     batch_len = x_curr.shape[0]
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
@@ -49,13 +82,15 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
                     adv_x[b_c*batch_len + i, j] = np.clip(x_curr[i, j] + dev_mag
                                     *(delta_x[i, j]/delta_x_norm[i, j]), 0, 1)
                 elif rd != None and rev == None:
-                    adv_x[b_c*batch_len + i, j] = x_curr[i, j] + dev_mag*(delta_x[i, j]/delta_x_norm[i, j])
+                    adv_x[b_c*batch_len + i, j] = (x_curr[i, j]
+                                   + dev_mag*(delta_x[i, j]/delta_x_norm[i, j]))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
                    dev_list, X_test, y_test, rd=None, rev=None):
+
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
