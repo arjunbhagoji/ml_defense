@@ -51,6 +51,12 @@ def mult_cls_atk(clf, X_test, dev_mag, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 def main(argv):
 
+    """
+    Main function to run strategic_svm.py. Set up SVM classifier, perform
+    and evaluate attack, deploy defense and perform strategic attack. Resutls
+    and adv. sample images are also saved on each task.
+    """
+
     # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
     DR = model_dict['dim_red']
@@ -68,11 +74,11 @@ def main(argv):
     #     X_train = X_train
 
     data_dict = get_data_shape(X_train, X_test)
-    no_of_features = data_dict['no_of_features']
+    n_features = data_dict['no_of_features']
 
     # Reshape dataset to have dimensions suitable for SVM
-    X_train_flat = X_train.reshape(-1, no_of_features)
-    X_test_flat = X_test.reshape(-1, no_of_features)
+    X_train_flat = X_train.reshape(-1, n_features)
+    X_test_flat = X_test.reshape(-1, n_features)
     # X_val_flat= X_val.reshape(-1, no_of_features)
 
     # Create a new model or load an existing one
@@ -80,10 +86,10 @@ def main(argv):
     model_tester(model_dict, clf, X_test_flat, y_test)
 
     # Assign parameters
-    n_mag = 10                                  # No. of deviations to consider
-    dev_list = np.linspace(0.1, 1.0, n_mag)    # A list of deviations mag.
-    # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
-    rd_list = [784, 100]
+    n_mag = 50                                  # No. of deviations to consider
+    dev_list = np.linspace(0.1, 5.0, n_mag)    # A list of deviations mag.
+    # Reduced dimensions to use
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     n_rd = len(rd_list)
     output_list = []
 
@@ -107,7 +113,7 @@ def main(argv):
 
         # Dimension reduce dataset and reshape
         X_train_dr, X_test_dr, dr_alg = dr_wrapper(X_train_flat, X_test_flat,
-                                                    DR, rd)
+                                                   DR, rd)
 
         X_train_dr = X_train_dr.reshape(-1, rd)
         X_test_dr = X_test_dr.reshape(-1, rd)
@@ -120,13 +126,15 @@ def main(argv):
         print('Performing strategic attack...')
         for i in range(n_mag):
             X_adv, y_ini = mult_cls_atk(clf, X_test_dr, dev_list[i], rd,
-                                                                    rev_flag)
+                                        rev_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-            if model_dict['dim_red']=='pca' or model_dict['dim_red']==None:
-                dr_alg = pca
+            if (DR == 'pca') or (DR == 'dca') or (DR == None):
                 save_svm_images(model_dict, n_features, X_test_dr, X_adv,
-                                    dev_list[i], rd, dr_alg)
+                                dev_list[i], rd, dr_alg)
         print_svm_output(model_dict, output_list, dev_list, rd, strat_flag=1)
+#------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
 if __name__ == "__main__":
    main(sys.argv[1:])
+ #------------------------------------------------------------------------------#

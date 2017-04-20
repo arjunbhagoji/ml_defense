@@ -86,6 +86,12 @@ def resolve_path_v(model_dict):
 
 #------------------------------------------------------------------------------#
 def svm_model_dict_create():
+
+    """
+    Parse arguments to strategic_svm.py and create model_dict containing the
+    parameters
+    """
+
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-st','--svm_type', default='linear', type=str,
@@ -286,7 +292,7 @@ def file_create(model_dict, rd, strat_flag=None):
     abs_path_o = resolve_path_o(model_dict)
     fname = get_model_name(model_dict)
     if strat_flag != None: fname += '_strat'
-    if rd != None: fname += '_'+model_dict['dim_red']
+    if rd != None: fname += ('_' + model_dict['dim_red'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
 #------------------------------------------------------------------------------#
@@ -313,48 +319,51 @@ def print_svm_output(model_dict, output_list, dev_list, rd=None, strat_flag=None
 def save_svm_images(model_dict, n_features, X_test, adv_x, dev_mag, rd=None,
                     dr_alg=None, rev=None):
 
-    no_of_img = 5
+    """
+    Save <no_of_img> adv. samples as image files in visual_data folder
+    """
+
+    no_of_img = 1
     indices = range(no_of_img)
     X_curr = X_test[indices]
     # channels = X_curr.shape[1]
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    abs_path_v=resolve_path_v(model_dict)
-    if rd != None and rev == None:
+    abs_path_v = resolve_path_v(model_dict)
+    if (rd != None) and (rev == None):
         height = int(np.sqrt(n_features))
         width = height
         X_curr_rev = dr_alg.inverse_transform(X_curr)
-    elif rd == None or (rd != None and rev != None):
+    elif (rd == None) or (rd != None and rev != None):
         height = X_test.shape[2]
         width = X_test.shape[3]
 
     channels = 1
     if channels == 1:
-        if rd != None and rev == None:
+        if (rd != None) and (rev == None):
             adv_x_curr = dr_alg.inverse_transform(adv_x[indices,:])
             np.clip(adv_x_curr, 0, 1)
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))
                 orig = X_curr_rev[i].reshape((height, width))
-                img.imsave(abs_path_v+'{}_{}_{}_mag{}.png'.format(
-                     i, DR, rd, dev_mag), adv*255, vmin=0, vmax=255,
-                    cmap='gray')
-                img.imsave(abs_path_v+'{}_{}_{}_orig.png'.format(
-                    i, DR, rd), orig*255, vmin=0, vmax=255, cmap='gray')
+                img.imsave(abs_path_v + '{}_{}_{}_mag{}.png'.format(i, DR, rd,
+                           dev_mag), adv*255, vmin=0, vmax=255, cmap='gray')
+                img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
+                           orig*255, vmin=0, vmax=255, cmap='gray')
 
-        elif rd == None or rev != None:
+        elif (rd == None) or (rev != None):
             adv_x_curr = adv_x[indices,:]
             for i in indices:
-                adv = adv_x_curr[i].reshape((height,width))
-                orig = X_curr[i].reshape((height,width))
+                adv = adv_x_curr[i].reshape((height, width))
+                orig = X_curr[i].reshape((height, width))
                 if rd != None:
-                    fname = abs_path_v+'{}_{}_rev_{}'.format(i, DR, rd)
+                    fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
                 elif rd == None:
-                    fname = abs_path_v+'{}'.format(i)
+                    fname = abs_path_v + '{}'.format(i)
                 img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
-                                            vmin=0, vmax=255, cmap='gray')
+                           vmin=0, vmax=255, cmap='gray')
                 img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
-                                                                cmap='gray')
+                           cmap='gray')
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)

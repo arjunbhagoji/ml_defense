@@ -20,11 +20,18 @@ from lib.defenses.nn_defenses import *
 #-----------------------------------------------------------------------------#
 def main(argv):
 
+    """
+    Main function of run_defense.py. Create adv. examples and evaluate attack.
+    Implement defense and reevaluate the same attack (does not aware of the
+    defense).
+    """
+
     # Parameters
-    batchsize = 500                             # Fixing batchsize
+    batchsize = 500                          # Fixing batchsize
     no_of_mags = 50                          # No. of deviations to consider
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
-    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions used
+    # Reduced dimensions used
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
     # Create model_dict from arguments
     model_dict = model_dict_create()

@@ -7,6 +7,9 @@ from ..utils.data_utils import *
 
 #------------------------------------------------------------------------------#
 def class_means(X, y):
+
+    """Return a list of means of each class in (X,y)"""
+
     classes = np.unique(y)
     no_of_classes = len(classes)
     means = []
@@ -20,6 +23,9 @@ def class_means(X, y):
 
 #------------------------------------------------------------------------------#
 def length_scales(X, y):
+
+    """Find distances from each class mean to means of the other classes"""
+
     means = class_means(X, y)
     no_of_classes = len(means)
     scales = []
@@ -37,6 +43,11 @@ def length_scales(X, y):
 
 #------------------------------------------------------------------------------#
 def naive_untargeted_attack(X, y):
+
+    """
+    Returns a minimum distance required to move a sample to a different class
+    """
+
     scales = length_scales(X, y)
     print scales
     data_len = len(X)
@@ -61,6 +72,9 @@ def naive_untargeted_attack(X, y):
 
 #------------------------------------------------------------------------------#
 def local_fns(input_var, target_var, test_prediction):
+
+    """Returns necessary Theano functions"""
+
     predictor = predict_fn(input_var, test_prediction)
     confidence = conf_fn(input_var, test_prediction)
     gradient = grad_fn(input_var, target_var, test_prediction)
@@ -73,6 +87,12 @@ def local_fns(input_var, target_var, test_prediction):
 
 #------------------------------------------------------------------------------#
 def acc_calc(X_adv, y, validator, indexer, confidence):
+
+    """
+    Calculate attack success and average confidence on (X_adv, y) where X_adv is
+    adv. examples and y is true labels
+    """
+
     loss_i, acc_i = validator(X_adv, y)
     c_i = 100 - acc_i*100
     indices_i = indexer(X_adv, y)
@@ -84,6 +104,12 @@ def acc_calc(X_adv, y, validator, indexer, confidence):
 #------------------------------------------------------------------------------#
 def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
                  confidence):
+
+    """
+    Calculate attack success and average confidence based w.r.t. true labels,
+    originally predicted labels and correctly classified labels, respectively
+    """
+
     o_list = []
     # Accuracy vs. true labels. Confidence on mismatched predictions
     c_w, conf_w = acc_calc(X_adv, y_test, validator, indexer, confidence)
@@ -101,6 +127,9 @@ def acc_calc_all(X_adv, y_test, X_test_mod, i_c, validator, indexer, predictor,
 
 #------------------------------------------------------------------------------#
 def avg_grad_calc(input_var, target_var, test_prediction, X_test, y_test):
+
+    """Return average gradient of model's loss evaluated on (X_test, y_test)"""
+
     gradient = grad_fn(input_var, target_var, test_prediction)
     delta_x = gradient(X_test, y_test)
     delta_x_abs = np.abs(delta_x)

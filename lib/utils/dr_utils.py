@@ -1,7 +1,13 @@
+"""
+Utility file containing helper functions that perform various dimensionality
+reduction technique.
+"""
+
 from sklearn.decomposition import PCA
 from sklearn.random_projection import GaussianRandomProjection as GRP
 
 from lib.utils.data_utils import *
+from lib.utils.DCA import DCA
 
 #------------------------------------------------------------------------------#
 def pca_dr(X_train, X_test, rd, X_val=None, rev=None):
@@ -55,14 +61,49 @@ def random_proj_dr(X_train, X_test, rd, rev=None):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
+def dca_dr(X_train, X_test, rd, X_val=None, rev=None):
+
+    """
+    Perform DCA on X_train then transform X_train, X_test (and X_val).
+    Return transformed data in original space if rev is True; otherwise, return
+    transformed data in DCA space.
+    """
+
+    # Fit DCA model on training data, random_state is specified to make sure
+    # result is reproducible
+    dca = DCA(n_components=rd, rho=None, rho_p=None)
+    dca.fit(X_train)
+
+    # Transforming training and test data
+    dca.fit(X_train, y_train)
+    X_train_dr = dca.transform(X_train)
+    X_test_dr = dca.transform(X_test)
+    if X_val is not None: X_val_dr = dca.transform(X_val)
+
+    if rev != None:
+        X_train_rev = dca.inverse_transform(X_train_dr)
+        X_test_rev = dca.inverse_transform(X_test_dr)
+        if X_val is not None:
+            X_val_rev = dca.inverse_transform(X_val_dr)
+            return X_train_rev, X_test_rev, X_val_rev, pca
+        else: return X_train_rev, X_test_rev, pca
+    elif rev == None:
+        if X_val is not None: return X_train_dr, X_test_dr, X_val_dr, pca
+        else: return X_train_dr, X_test_dr, pca
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
 def invert_dr(X, dr_alg, DR):
-    if DR == 'pca':
+
+    """
+    Inverse transform data <X> in reduced dimension back to its full dimension
+    """
+
+    if (DR == 'pca') or (DR == 'dca'):
         X_rev = dr_alg.inverse_transform(X)
 
     return X_rev
-
 #------------------------------------------------------------------------------#
-
 
 #------------------------------------------------------------------------------#
 def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
@@ -70,6 +111,7 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
     """
     A wrapper function for dimensionality reduction functions.
     """
+
     data_dict = get_data_shape(X_train, X_test, X_val)
     no_of_dim = data_dict['no_of_dim']
 
@@ -94,8 +136,18 @@ def dr_wrapper(X_train, X_test, DR, rd, X_val=None, rev=None):
         else:
             X_train, X_test, dr_alg = pca_dr(DR_in_train, DR_in_test, rd,
                                              DR_in_val, rev)
+
     #----------------------------- Random Projection --------------------------#
     elif DR == 'rp':
+        if X_val is not None:
+            X_train, X_test, X_val, dr_alg = pca_dr(DR_in_train, DR_in_test, rd,
+                                                    DR_in_val, rev)
+        else:
+            X_train, X_test, dr_alg = pca_dr(DR_in_train, DR_in_test, rd,
+                                             DR_in_val, rev)
+
+    #----------------------------------- DCA ----------------------------------#
+    if DR == 'dca':
         if X_val is not None:
             X_train, X_test, X_val, dr_alg = pca_dr(DR_in_train, DR_in_test, rd,
                                                     DR_in_val, rev)
