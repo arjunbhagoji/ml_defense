@@ -2,6 +2,7 @@
 DCA class performs Discriminant Correlation Analysis (DCA). It can be used as
 a dimensionality reduction algorithm. Usage is similar to sklearn's
 preprocessing classes such as PCA.
+(Code from Thee Chanyaswad (tc7@princeton.edu))
 """
 
 import numpy as np

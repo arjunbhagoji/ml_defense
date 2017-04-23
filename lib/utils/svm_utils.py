@@ -1,4 +1,6 @@
-import sys, os, argparse
+import sys
+import os
+import argparse
 import numpy as np
 from os.path import dirname
 from sklearn import svm
@@ -9,8 +11,9 @@ from lib.utils.dr_utils import invert_dr
 from lib.attacks.svm_attacks import min_dist_calc
 
 #------------------------------------------------------------------------------#
-def resolve_path_m(model_dict):
 
+
+def resolve_path_m(model_dict):
     """
     Resolve absolute paths of models for different datasets
 
@@ -28,15 +31,16 @@ def resolve_path_m(model_dict):
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
     rel_path_m = 'svm_models/' + dataset
-    if dataset == 'GTSRB': rel_path_m += str(channels)
+    if dataset == 'GTSRB':
+        rel_path_m += str(channels)
     abs_path_m = os.path.join(script_dir, rel_path_m + '/')
-    if not os.path.exists(abs_path_m): os.makedirs(abs_path_m)
+    if not os.path.exists(abs_path_m):
+        os.makedirs(abs_path_m)
     return abs_path_m
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def resolve_path_o(model_dict):
 
+def resolve_path_o(model_dict):
     """
     Resolve absolute paths of output data for different datasets
 
@@ -54,15 +58,16 @@ def resolve_path_o(model_dict):
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
     rel_path_o = 'svm_output_data/' + dataset
-    if dataset == 'GTSRB': rel_path_o += str(channels)
+    if dataset == 'GTSRB':
+        rel_path_o += str(channels)
     abs_path_o = os.path.join(script_dir, rel_path_o + '/')
-    if not os.path.exists(abs_path_o): os.makedirs(abs_path_o)
+    if not os.path.exists(abs_path_o):
+        os.makedirs(abs_path_o)
     return abs_path_o
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def resolve_path_v(model_dict):
 
+def resolve_path_v(model_dict):
     """
     Resolve absolute paths of visual data for different datasets
 
@@ -81,15 +86,16 @@ def resolve_path_v(model_dict):
     channels = model_dict['channels']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
     rel_path_v = 'svm_visual_data/' + dataset + '/' + model_name
-    if dataset == 'GTSRB': rel_path_v += str(channels)
+    if dataset == 'GTSRB':
+        rel_path_v += str(channels)
     abs_path_v = os.path.join(script_dir, rel_path_v + '/')
-    if not os.path.exists(abs_path_v): os.makedirs(abs_path_v)
+    if not os.path.exists(abs_path_v):
+        os.makedirs(abs_path_v)
     return abs_path_v
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def svm_model_dict_create():
 
+def svm_model_dict_create():
     """
     Parse arguments to strategic_svm.py and create model_dict containing the
     parameters
@@ -97,73 +103,98 @@ def svm_model_dict_create():
 
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-st','--svm_type', default='linear', type=str,
-           help='Specify type of SVM to be used (default: linear)')
+    parser.add_argument(
+        '-st',
+        '--svm_type',
+        default='linear',
+        type=str,
+        help='Specify type of SVM to be used (default: linear)')
     parser.add_argument('--dataset', default='MNIST', type=str,
-           help='Specify dataset (default: MNIST)')
-    parser.add_argument('-c', '--channels', default=1, type=int,
-           help='Specify number of input channels (1 (default) or 3)')
-    parser.add_argument('--two_classes',
-           help='Train SVM on two classes instead of all available classes')
-    parser.add_argument('-dr','--dim_red', default='pca', type=str,
-           help='Specify dimension reduction (default: pca)')
+                        help='Specify dataset (default: MNIST)')
+    parser.add_argument(
+        '-c',
+        '--channels',
+        default=1,
+        type=int,
+        help='Specify number of input channels (1 (default) or 3)')
+    parser.add_argument(
+        '--two_classes',
+        action='store_true',
+        help='Train SVM on two classes instead of all available classes')
+    parser.add_argument('-dr', '--dim_red', default='pca', type=str,
+                        help='Specify dimension reduction (default: pca)')
+    parser.add_argument(
+        '--rev',
+        action='store_true',
+        help='Train SVM and attack on DR sample reverted to original space')
     parser.add_argument('-C', '--penconst', default=1.0, type=float,
-           help='Specify penalty parameter C (default: 1.0)')
-    parser.add_argument('-p', '--penalty', default='l2', type=str,
-           help='Specify norm to use in penalization (l1 or l2 (default))')
+                        help='Specify penalty parameter C (default: 1.0)')
+    parser.add_argument(
+        '-p',
+        '--penalty',
+        default='l2',
+        type=str,
+        help='Specify norm to use in penalization (l1 or l2 (default))')
+    parser.add_argument(
+        '-pp',
+        '--preprocess',
+        default=None,
+        type=str,
+        help='Specify preprocessing on dataset (default: None)')
     args = parser.parse_args()
 
     # Create and update model_dict
     model_dict = {}
-    model_dict.update({'svm_type':args.svm_type})
-    model_dict.update({'dataset':args.dataset})
-    model_dict.update({'channels':args.channels})
-    model_dict.update({'dim_red':args.dim_red})
-    model_dict.update({'penconst':args.penconst})
-    model_dict.update({'penalty':args.penalty})
+    model_dict.update({'svm_type': args.svm_type})
+    model_dict.update({'dataset': args.dataset})
+    model_dict.update({'channels': args.channels})
+    model_dict.update({'dim_red': args.dim_red})
+    model_dict.update({'penconst': args.penconst})
+    model_dict.update({'penalty': args.penalty})
+    model_dict.update({'preprocess': args.preprocess})
+    if args.rev:
+        model_dict.update({'rev': 1})
+    else:
+        model_dict.update({'rev': None})
     if args.two_classes:
-        model_dict.update({'classes':2})
+        model_dict.update({'classes': 2})
     else:
         # TODO: preferrably put this somehere else
         if (model_dict['dataset'] == 'MNIST'):
-            model_dict.update({'classes':10})
+            model_dict.update({'classes': 10})
         elif (model_dict['dataset'] == 'GTSRB'):
-            model_dict.update({'classes':43})
+            model_dict.update({'classes': 43})
 
     return model_dict
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def get_model_name(model_dict, rd=None, rev=None):
-
     """
-    Helper function to get model name from <model_dict> and <rd>
+    Helper function to get model name from <model_dict>, <rd> and <rev>
     """
 
-    if rd == None:
+    if rd is None:
         model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(model_dict['svm_type'],
-                                                  model_dict['classes'],
-                                                  model_dict['penalty'],
-                                                  model_dict['penconst'])
-    elif rd != None and rev == None:
-        model_name = 'svm_{}_cls{}_{}{}_{}_C{:.0e}'.format(model_dict['svm_type'],
                                                       model_dict['classes'],
-                                                      model_dict['dim_red'], rd,
                                                       model_dict['penalty'],
                                                       model_dict['penconst'])
-    elif rd != None and rev != None:
-        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{:.0e}'.format(model_dict['svm_type'],
-                                                      model_dict['classes'],
-                                                      model_dict['dim_red'], rd,
-                                                      model_dict['penalty'],
-                                                      model_dict['penconst'])
+    elif rd is not None and rev is None:
+        model_name = 'svm_{}_cls{}_{}{}_{}_C{:.0e}'.format(
+            model_dict['svm_type'], model_dict['classes'],
+            model_dict['dim_red'], rd, model_dict['penalty'],
+            model_dict['penconst'])
+    elif rd is not None and rev is not None:
+        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{:.0e}'.format(
+            model_dict['svm_type'], model_dict['classes'],
+            model_dict['dim_red'], rd, model_dict['penalty'],
+            model_dict['penconst'])
 
     return model_name
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None, rev=None):
 
+def model_loader(model_dict, rd=None, rev=None):
     """
     Returns a classifier object if it already exists. Returns None, otherwise.
     """
@@ -171,15 +202,16 @@ def model_loader(model_dict, rd=None, rev=None):
     print('Loading model...')
     abs_path_m = resolve_path_m(model_dict)
     try:
-        clf = joblib.load(abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
-    except:
+        clf = joblib.load(abs_path_m + get_model_name(model_dict, rd, rev) +
+                          '.pkl')
+    except BaseException:
         clf = None
+
     return clf
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
+def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     """
     Trains and returns SVM. Also save SVM to file.
     """
@@ -204,9 +236,8 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     return clf
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 
+def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
     """
     Returns a SVM classifier
     """
@@ -214,14 +245,13 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
     # Load model based on model_dict
     clf = model_loader(model_dict, rd, rev)
     # If model does not exist, train a new SVM
-    if clf == None:
+    if clf is None:
         clf = model_trainer(model_dict, X_train, y_train, rd, rev)
     return clf
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
 
+def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     """
     Calculate model's accuracy and average normalized distance from correctly
     classified samples to separating hyperplane of corresponding class
@@ -252,23 +282,22 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     # Resolve path to utility output file
     abs_path_o = resolve_path_o(model_dict)
     fname = 'utility_' + get_model_name(model_dict)
-    if rd != None: fname += '_' + DR
-    if rev != None: fname += '_rev'
     ofile = open(abs_path_o + fname + '.txt', 'a')
-    DR=model_dict['dim_red']
-    if rd == None:
-        ofile.write('No_'+DR+' ')
+    if rd is None:
+        ofile.write('No_' + DR + ':\t')
     else:
-        ofile.write( str(rd) + ' ')
-# Format: <dimensions> <accuracy> <avg. dist.>
-    ofile.write('{:.2f} {:.3f}'.format(float(n_correct)/test_len*100,
-                                               sum_dist/n_correct))
+        if rev is None:
+            ofile.write(DR + '_{}:\t'.format(rd))
+        else:
+            ofile.write(DR + '_rev_{}:\t'.format(rd))
+    # Format: <dimensions> <accuracy> <avg. dist.>
+    ofile.write('{:.2f} {:.3f}'.format(float(n_correct) / test_len * 100,
+                                       sum_dist / n_correct))
     ofile.write('\n\n')
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def acc_calc_all(clf, X_adv, y_test, y_ini):
 
+def acc_calc_all(clf, X_adv, y_test, y_ini):
     """
     Return attack success rate on <clf> based on initially correctly predicted
     samples
@@ -278,24 +307,23 @@ def acc_calc_all(clf, X_adv, y_test, y_ini):
     y_adv = clf.predict(X_adv)
     # Accuracy vs. true labels
     atk_success = (y_adv != y_test)
-    acc_t = np.sum(atk_success)/float(len(X_adv))
+    acc_t = np.sum(atk_success) / float(len(X_adv))
     o_list.append(acc_t)
     # Accuracy vs. predicted labels
     atk_success = (y_adv != y_ini)
-    acc_p = np.sum(atk_success)/float(len(X_adv))
+    acc_p = np.sum(atk_success) / float(len(X_adv))
     o_list.append(acc_p)
     # Accuracy for adv. examples generated from correctly classified examples
     i_c = np. where(y_ini == y_test)
     atk_success = (y_adv[i_c] != y_test[i_c])
-    acc_c = np.sum(atk_success)/float(len(y_adv[i_c]))
+    acc_c = np.sum(atk_success) / float(len(y_adv[i_c]))
     o_list.append(acc_c)
 
     return o_list
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def file_create(model_dict, rd, strat=None, rev=None):
 
+def file_create(model_dict, rd=None, strat=None, rev=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type, strat, and rev
@@ -304,17 +332,19 @@ def file_create(model_dict, rd, strat=None, rev=None):
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
     fname = get_model_name(model_dict)
-    if strat != None: fname += '_strat'
-    if rd != None: fname += '_'+model_dict['dim_red']
-    if rev != None: fname += '_rev'
+    if strat is not None:
+        fname += '_strat'
+    if rev is not None:
+        fname += '_rev'
+    if rd is not None:
+        fname += '_' + model_dict['dim_red']
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile, fname
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def print_svm_output(model_dict, output_list, dev_list, rd=None,
-                    strat=None, rev=None):
 
+def print_svm_output(model_dict, output_list, dev_list, rd=None, strat=None,
+                     rev=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
@@ -331,15 +361,14 @@ def print_svm_output(model_dict, output_list, dev_list, rd=None,
     return fname
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
                     dr_alg=None, rev=None):
-
     """
     Save <no_of_img> adv. samples as image files in visual_data folder
     """
 
-    no_of_img = 1
+    no_of_img = 1    # Number of images to save
     indices = range(no_of_img)
     X_curr = X_test[indices]
     dataset = model_dict['dataset']
@@ -348,7 +377,7 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
     no_of_features = data_dict['no_of_features']
     height = int(np.sqrt(no_of_features))
     width = height
-    if rd != None and rev == None:
+    if (rd is not None) and (rev is None):
         X_curr = invert_dr(X_curr, dr_alg, DR)
     # elif rd == None or (rd != None and rev != None):
     #     height = X_test.shape[2]
@@ -356,36 +385,47 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
 
     channels = 1
     if channels == 1:
-        if rd != None and rev == None:
-            adv_x_curr = invert_dr(adv_x[indices,:], dr_alg, DR)
+        if (rd is not None) and (rev is None):
+            # Invert dr samples to their original space
+            adv_x_curr = invert_dr(adv_x[indices, :], dr_alg, DR)
             np.clip(adv_x_curr, 0, 1)
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))
-                orig = X_curr_rev[i].reshape((height, width))
-                img.imsave(abs_path_v + '{}_{}_{}_mag{}.png'.format(i, DR, rd,
-                           dev_mag), adv*255, vmin=0, vmax=255, cmap='gray')
+                orig = X_curr[i].reshape((height, width))
+                img.imsave(
+                    abs_path_v +
+                    '{}_{}_{}_mag{}.png'.format(
+                        i,
+                        DR,
+                        rd,
+                        dev_mag),
+                    adv *
+                    255,
+                    vmin=0,
+                    vmax=255,
+                    cmap='gray')
                 img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
-                           orig*255, vmin=0, vmax=255, cmap='gray')
+                           orig * 255, vmin=0, vmax=255, cmap='gray')
 
-        elif (rd == None) or (rev != None):
-            adv_x_curr = adv_x[indices,:]
+        elif (rd is None) or (rev is not None):
+            adv_x_curr = adv_x[indices, :]
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))
                 orig = X_curr[i].reshape((height, width))
-                if rd != None:
+                if rd is not None:
                     fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
-                elif rd == None:
+                elif rd is None:
                     fname = abs_path_v + '{}'.format(i)
-                img.imsave(fname + '_mag{}.png'.format(dev_mag), adv*255,
+                img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
                            vmin=0, vmax=255, cmap='gray')
-                img.imsave(fname + '_orig.png', orig*255, vmin=0, vmax=255,
+                img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255,
                            cmap='gray')
     else:
         adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
 #------------------------------------------------------------------------------#
 
-# #------------------------------------------------------------------------------#
+
 # def plotter(acc_def, acc, dev_list, rd_list, recons_flag=0, strat_flag=0):
 #
 #     import matplotlib
