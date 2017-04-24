@@ -1,11 +1,10 @@
 import numpy as np
 import argparse
 import subprocess
-from sklearn import svm
-from sklearn.decomposition import PCA
+import os
 
 from lib.utils.svm_utils import *
-from lib.utils.data_utils import *
+from lib.utils.data_utils import load_dataset, get_data_shape
 from lib.utils.dr_utils import *
 from lib.attacks.svm_attacks import *
 
@@ -53,8 +52,16 @@ def main(argv):
     # Reduced dimensions to use
     rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     # rd_list = [784, 100]
+    strat_flag = 1
     n_rd = len(rd_list)
     output_list = []
+
+    # Clear old output files
+    abs_path_o = resolve_path_o(model_dict)
+    _, fname = file_create(model_dict)
+    os.remove(abs_path_o + fname + '.txt')
+    _, fname = file_create(model_dict, rd=1, strat=strat_flag, rev=rev_flag)
+    os.remove(abs_path_o + fname + '.txt')
 
     # Test clf against adv. samples
     # print('Performing attack...')
@@ -72,7 +79,6 @@ def main(argv):
 
     # Retrain defense and strategic attack
     print('--------------Retrain Defense & Strategic Attack--------------')
-    strat_flag = 1
     for rd in rd_list:
         output_list = []
         print('Reduced dimensions: {}'.format(rd))
@@ -92,10 +98,8 @@ def main(argv):
                                         rev_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
 
-            inv_list = ['pca', 'pca-whiten', 'dca', 'antiwhiten']
-            if DR in inv_list:
-                save_svm_images(model_dict, data_dict, X_test_dr, X_adv,
-                                dev_list[i], rd, dr_alg, rev_flag)
+            save_svm_images(model_dict, data_dict, X_test_dr, X_adv,
+                            dev_list[i], rd, dr_alg, rev_flag)
 
         fname = print_svm_output(model_dict, output_list, dev_list, rd,
                                  strat_flag, rev_flag)

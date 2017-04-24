@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+import time
 import numpy as np
 from os.path import dirname
 from sklearn import svm
@@ -140,7 +141,9 @@ def svm_model_dict_create():
         '--preprocess',
         default=None,
         type=str,
-        help='Specify preprocessing on dataset (default: None)')
+        help='Specify preprocessing on dataset (std, whiten, antiwhiten(*)) \
+             (default: None) \n (*) is degree of covariance (>= -1)')
+
     args = parser.parse_args()
 
     # Create and update model_dict
@@ -160,10 +163,13 @@ def svm_model_dict_create():
         model_dict.update({'classes': 2})
     else:
         # TODO: preferrably put this somehere else
-        if (model_dict['dataset'] == 'MNIST'):
+        dataset = model_dict['dataset']
+        if (dataset == 'MNIST'):
             model_dict.update({'classes': 10})
-        elif (model_dict['dataset'] == 'GTSRB'):
+        elif (dataset == 'GTSRB'):
             model_dict.update({'classes': 43})
+        elif (dataset == 'HAR'):
+            model_dict.update({'classes': 6})
 
     return model_dict
 #------------------------------------------------------------------------------#
@@ -174,21 +180,19 @@ def get_model_name(model_dict, rd=None, rev=None):
     Helper function to get model name from <model_dict>, <rd> and <rev>
     """
 
-    if rd is None:
-        model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(model_dict['svm_type'],
-                                                      model_dict['classes'],
-                                                      model_dict['penalty'],
-                                                      model_dict['penconst'])
-    elif rd is not None and rev is None:
-        model_name = 'svm_{}_cls{}_{}{}_{}_C{:.0e}'.format(
-            model_dict['svm_type'], model_dict['classes'],
-            model_dict['dim_red'], rd, model_dict['penalty'],
-            model_dict['penconst'])
-    elif rd is not None and rev is not None:
-        model_name = 'svm_{}_cls{}_{}{}_rev_{}_C{:.0e}'.format(
-            model_dict['svm_type'], model_dict['classes'],
-            model_dict['dim_red'], rd, model_dict['penalty'],
-            model_dict['penconst'])
+    model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(
+        model_dict['svm_type'],
+        model_dict['classes'],
+        model_dict['penalty'],
+        model_dict['penconst'])
+
+    if model_dict['preprocess'] is not None:
+        model_name += ('_' + model_dict['preprocess'])
+
+    if rd is not None:
+        model_name += '_{}_{}'.format(model_dict['dim_red'], rd)
+        if rev is not None:
+            model_name += '_rev'
 
     return model_name
 #------------------------------------------------------------------------------#
@@ -217,6 +221,7 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     """
 
     print('Training model...')
+    start_time = time.time()
     abs_path_m = resolve_path_m(model_dict)
     svm_model = model_dict['svm_type']
     C = model_dict['penconst']
@@ -230,6 +235,7 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
     # Train model
     clf.fit(X_train, y_train)
+    print('Finish training in {}s'.format(time.time() - start_time))
 
     # Save model
     joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
@@ -334,10 +340,10 @@ def file_create(model_dict, rd=None, strat=None, rev=None):
     fname = get_model_name(model_dict)
     if strat is not None:
         fname += '_strat'
-    if rev is not None:
-        fname += '_rev'
     if rd is not None:
         fname += '_' + model_dict['dim_red']
+    if rev is not None:
+        fname += '_rev'
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile, fname
 #------------------------------------------------------------------------------#
@@ -394,13 +400,8 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
                 orig = X_curr[i].reshape((height, width))
                 img.imsave(
                     abs_path_v +
-                    '{}_{}_{}_mag{}.png'.format(
-                        i,
-                        DR,
-                        rd,
-                        dev_mag),
-                    adv *
-                    255,
+                    '{}_{}_{}_mag{}.png'.format(i, DR, rd, dev_mag),
+                    adv * 255,
                     vmin=0,
                     vmax=255,
                     cmap='gray')

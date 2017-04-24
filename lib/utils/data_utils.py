@@ -14,14 +14,15 @@ from matplotlib import pyplot as plt
 from matplotlib import image as img
 
 from os.path import dirname
+from sklearn.preprocessing import StandardScaler
+
+from lib.utils.AntiWhiten import AntiWhiten
 
 #------------------------------------------------------------------------------#
 
 
 def model_dict_create():
-    """
-    Parse arguments and save them in model_dict
-    """
+    """Parse arguments and save them in model_dict"""
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='MNIST', type=str,
@@ -70,13 +71,9 @@ def model_dict_create():
     return model_dict
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def get_model_name(model_dict, rd=None, rev=None):
-    """
-    Resolve a model's name to save/load based on model_dict
-    """
+    """Resolve a model's name to save/load based on model_dict"""
 
     model_name = model_dict['model_name']
     depth = model_dict['depth']
@@ -89,18 +86,16 @@ def get_model_name(model_dict, rd=None, rev=None):
         m_name = 'cnn_{}_{}'.format(depth, width)
 
     reg = model_dict['reg']
-    if rd != None:
+    if rd is not None:
         m_name += '_{}_{}'.format(rd, DR)
-    if rev != None:
+    if rev is not None:
         m_name += '_rev'
-    if reg != None:
+    if reg is not None:
         m_name += '_reg_{}'.format(reg)
     if model_name == 'custom':
         m_name += '_drop'
 
     return m_name
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 
 
@@ -164,8 +159,6 @@ def load_dataset_MNIST(model_dict):
     return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def load_dataset_GTSRB(model_dict):
     """
@@ -180,9 +173,9 @@ def load_dataset_GTSRB(model_dict):
         Parameters
         ----------
         file    : string
-                  Name of the pickle file.
+                          Name of the pickle file.
         columns : list of strings
-                  List of columns in pickled data we're interested in.
+                          List of columns in pickled data we're interested in.
 
         Returns
         -------
@@ -229,23 +222,63 @@ def load_dataset_GTSRB(model_dict):
     return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
+
+def preprocess(model_dict, data):
+    """
+    Preprocess data (tuple of X_train, y_train, X_val, y_val, X_test, y_test)
+    """
+
+    preprocess = model_dict['preprocess']
+    X_train, y_train, X_val, y_val, X_test, y_test = data
+
+    # Get data shape
+    data_dict = get_data_shape(X_train, X_test, X_val)
+    n_features = data_dict['no_of_features']
+    # Reshape data to [n_samples, n_features]
+    X_train = X_train.reshape(-1, n_features)
+    X_test = X_test.reshape(-1, n_features)
+    X_val = X_val.reshape(-1, n_features)
+
+    # Construct preprocessor
+    if preprocess == 'std':
+        # Preprocess with sklearn StandardScaler (zero mean, unit variance)
+        pp = StandardScaler()
+    elif preprocess == 'whiten':
+        # Preprocess data by projecting to basis that covariance of data is an
+        # identity matrix
+        pp = AntiWhiten(n_components=n_features, whiten=-1)
+    elif preprocess == 'antiwhiten':
+        # Preprocess data by projecting to basis that covariance of data is
+        # exponentiated to a certain degree (1)
+        pp = AntiWhiten(n_components=n_features, whiten=1)
+    else:
+        raise ValueError('Unrecognized preprocessing method')
+
+    # Preprocess
+    pp.fit(X_train)
+    X_train = pp.transform(X_train)
+    X_test = pp.transform(X_test)
+    X_val = pp.transform(X_val)
+
+    return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
 
 def load_dataset(model_dict):
-    """
-    Load and return dataset specified in model_dict
-    """
+    """Load and return dataset specified in model_dict"""
 
     dataset = model_dict['dataset']
     if dataset == 'MNIST':
-        return load_dataset_MNIST(model_dict)
+        data = load_dataset_MNIST(model_dict)
     elif dataset == 'GTSRB':
-        return load_dataset_GTSRB(model_dict)
+        data = load_dataset_GTSRB(model_dict)
     elif dataset == 'HAR':
-        return load_dataset_HAR(model_dict)
-#------------------------------------------------------------------------------#
+        data = load_dataset_HAR(model_dict)
 
+    if model_dict['preprocess'] is not None:
+        data = preprocess(model_dict, data)
+
+    return data
 #------------------------------------------------------------------------------#
 
 
@@ -278,46 +311,48 @@ def get_data_shape(X_train, X_test, X_val=None):
         channels = X_train.shape[1]
         features_per_c = X_train.shape[2]
         no_of_features = channels * features_per_c
-        data_dict.update({'no_of_features': no_of_features, 'channels': channels,
+        data_dict.update({'no_of_features': no_of_features,
+                          'channels': channels,
                           'features_per_c': features_per_c})
     elif no_of_dim == 4:
         channels = X_train.shape[1]
         height = X_train.shape[2]
         width = X_train.shape[3]
         no_of_features = channels * height * width
-        data_dict.update({'height': height, 'width': width, 'channels': channels,
+        data_dict.update({'height': height,
+                          'width': width,
+                          'channels': channels,
                           'no_of_features': no_of_features})
 
     return data_dict
 #------------------------------------------------------------------------------#
 
 
-#------------------------------------------------------------------------------#
 def reshape_data(X, data_dict, rd=None, rev=None):
     """
-    Reshape data into an appropriate shape based on <data_dict> and <rd>, <rev>
-    flags.
+    Reshape data into its original shape if <rd> is set to None, or if <rev> is
+    not None. Otherwise, reshape to reduced dimensions <rd>
     """
 
     no_of_dim = data_dict['no_of_dim']
     X_len = len(X)
 
     if no_of_dim == 2:
-        if rd == None or (rd != None and rev != None):
+        if rd is None or (rd is not None and rev is not None):
             no_of_features = data_dict['no_of_features']
             X = X.reshape((X_len, no_of_features))
-        elif rd != None:
+        elif rd is not None:
             X = X.reshape((X_len, rd))
     elif no_of_dim == 3:
         channels = data_dict['channels']
-        if rd == None:
+        if rd is None:
             features_per_c = data_dict['features_per_c']
             X = X.reshape((X_len, channels, features_per_c))
-        elif rd != None:
+        elif rd is not None:
             X = X.reshape((X_len, channels, rd))
     elif no_of_dim == 4:
         channels = data_dict['channels']
-        if rd == None or (rd != None and rev != None):
+        if (rd is None) or (rd is not None and rev is not None):
             height = data_dict['height']
             width = data_dict['width']
             X = X.reshape((X_len, channels, height, width))
@@ -325,14 +360,10 @@ def reshape_data(X, data_dict, rd=None, rev=None):
     return X
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 dr_alg=None, rev=None):
-    """
-    Save <no_of_img> samples as image files in visual_data folder.
-    """
+    """Save <no_of_img> samples as image files in visual_data folder"""
 
     from lib.utils.dr_utils import invert_dr
 
@@ -345,13 +376,13 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     DR = model_dict['dim_red']
     abs_path_v = resolve_path_v(model_dict)
 
-    if (rd != None) and (rev == None):
+    if (rd is not None) and (rev is None):
         X_curr = invert_dr(X_curr, dr_alg, DR)
         features_per_c = X_curr.shape[-1]
         height = int(np.sqrt(features_per_c))
         width = height
         X_curr_rev = X_curr.reshape((no_of_img, channels, height, width))
-    elif (rd == None) or (rd != None and rev != None):
+    elif (rd is None) or ((rd is not None) and (rev is not None)):
         height = data_dict['height']
         width = data_dict['width']
 
@@ -359,7 +390,7 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
         dev_count = 0
         for dev_mag in dev_list:
             adv_curr = adv_x[indices, :, dev_count]
-            if (rd != None) and (rev == None):
+            if (rd is not None) and (rev is None):
                 adv_x_rev = invert_dr(adv_curr, dr_alg, DR)
                 adv_x_rev = adv_x_rev.reshape(
                     (no_of_img, channels, height, width))
@@ -367,33 +398,44 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 for i in indices:
                     adv = adv_x_rev[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    img.imsave(abs_path_v + '{}_{}_{}_{}_mag{}.png'.format(atk,
-                                                                           i, DR, rd, dev_mag), adv * 255, vmin=0, vmax=255,
-                               cmap='gray')
-                    img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR,
-                                                                       rd), orig * 255, vmin=0, vmax=255, cmap='gray')
+                    img.imsave(
+                        abs_path_v +
+                        '{}_{}_{}_{}_mag{}.png'.format(atk, i, DR, d, dev_mag),
+                        adv * 255,
+                        vmin=0,
+                        vmax=255,
+                        cmap='gray')
+                    img.imsave(
+                        abs_path_v +
+                        '{}_{}_{}_orig.png'.format(i, DR, rd),
+                        orig * 255,
+                        vmin=0,
+                        vmax=255,
+                        cmap='gray')
 
-            elif (rd == None) or (rev != None):
+            elif (rd is None) or (rev is not None):
                 adv_x_curr = adv_x[indices, :, dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height, width))
                     orig = X_curr[i].reshape((height, width))
-                    if rd != None:
+                    if rd is not None:
                         fname = abs_path_v + ' {}_{}_{}_rev_{}'.format(atk, i,
                                                                        DR, rd)
-                    elif rd == None:
+                    elif rd is None:
                         fname = abs_path_v + '{}_{}'.format(atk, i)
                     img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
-                               vmin=0, vmax=255, cmap='gray')
-                    img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255,
-                               cmap='gray')
+                                       vmin=0, vmax=255, cmap='gray')
+                    img.imsave(
+                        fname + '_orig.png',
+                        orig * 255,
+                        vmin=0,
+                        vmax=255,
+                        cmap='gray')
             dev_count += 1
     # else:
         # TODO
         # adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
         # orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 
 
@@ -415,17 +457,15 @@ def utility_write(model_dict, test_acc, test_conf, rd, rev):
     abs_path_o = resolve_path_o(model_dict)
     ofile = open(abs_path_o + fname, 'a')
     DR = model_dict['dim_red']
-    if rd == None:
+    if rd is None:
         ofile.write('No_' + DR + ':\t')
     else:
-        if rev == None:
+        if rev is None:
             ofile.write(DR + '_{}:\t'.format(rd))
         else:
             ofile.write(DR + '_rev_{}:\t'.format(rd))
     ofile.write('{:.3f}, {:.3f}\n'.format(test_acc, test_conf))
     ofile.close()
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 
 
@@ -441,33 +481,18 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
     fname = model_dict['attack']
     fname += '_' + get_model_name(model_dict)
 
-    # model_name = model_dict['model_name']
-    DR = model_dict['dim_red']
-    reg = model_dict['reg']
-
-    # # MLP model
-    # if model_name in ('mlp', 'custom'):
-    #     depth = model_dict['depth']
-    #     width = model_dict['width']
-    #     fname += '_nn_{}_{}'.format(depth, width)
-    # # CNN model
-    # elif model_name == 'cnn':
-    #     fname += '_cnn_papernot'
-
-    if strat_flag != None:
+    if strat_flag is not None:
         fname += '_strat'
-    if rev != None:
+    if rev is not None:
         fname += '_rev'
-    if rd != None:
-        fname += '_' + DR
-    if reg != None:
-        fname += '_reg_{}'.format(reg)
+    if rd is not None:
+        fname += '_' + model_dict['dim_red']
+    if reg is not None:
+        fname += '_reg_{}'.format(model_dict['reg'])
     if is_defense:
         fname += ('_' + model_dict['defense'])
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 
 
@@ -489,8 +514,6 @@ def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
     plotfile.close()
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def resolve_path_i(model_dict):
     """
@@ -498,8 +521,7 @@ def resolve_path_i(model_dict):
 
     Parameters
     ----------
-    dataset : string
-              Name of desired dataset
+    dataset : string (Name of desired dataset)
 
     Returns
     -------
@@ -514,8 +536,6 @@ def resolve_path_i(model_dict):
     return abs_path_i
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def resolve_path_m(model_dict):
     """
@@ -523,8 +543,7 @@ def resolve_path_m(model_dict):
 
     Parameters
     ----------
-    model_dict : dictionary
-                 contains model's parameters
+    model_dict : dictionary contains model's parameters
 
     Returns
     -------
@@ -543,8 +562,6 @@ def resolve_path_m(model_dict):
     return abs_path_m
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def resolve_path_o(model_dict):
     """
@@ -552,8 +569,7 @@ def resolve_path_o(model_dict):
 
     Parameters
     ----------
-    model_dict : dictionary
-                 contains model's parameters
+    model_dict : dictionary contains model's parameters
 
     Returns
     -------
@@ -572,8 +588,6 @@ def resolve_path_o(model_dict):
     return abs_path_o
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-
 
 def resolve_path_v(model_dict):
     """
@@ -581,8 +595,7 @@ def resolve_path_v(model_dict):
 
     Parameters
     ----------
-    model_dict : dictionary
-                 contains model's parameters
+    model_dict : dictionary contains model's parameters
 
     Returns
     -------
@@ -597,10 +610,9 @@ def resolve_path_v(model_dict):
     rel_path_v = 'visual_data/' + dataset + '/' + model_name
     if dataset == 'GTSRB':
         rel_path_v += str(channels)
-    if defense != None:
+    if defense is not None:
         rel_path_v += '/' + defense
     abs_path_v = os.path.join(script_dir, rel_path_v + '/')
     if not os.path.exists(abs_path_v):
         os.makedirs(abs_path_v)
     return abs_path_v
-#------------------------------------------------------------------------------#
