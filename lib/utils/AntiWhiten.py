@@ -42,6 +42,7 @@ class AntiWhiten:
 
         self.n_components = n_components
         self.deg = deg
+        self.transform_matrix_ = None
 
     def _check_dim(self, dim, data_len):
         """Return valid dimensions"""
@@ -91,6 +92,36 @@ class AntiWhiten:
         v *= signs[:, np.newaxis]
         return u, v
 
+    def _set_transform_matrix(self, deg, dim, save=True):
+        """
+        Set transformation matrix with shape [n_features, n_components]
+        used to apply to input data in row notation [n_samples, n_features]
+        (n_features is the original number of dimensions)
+        """
+
+        V = self.V_[:, :dim]
+        S = self.S_[:dim]
+
+        if deg == -1:
+            # X_whiten = X * V / S * sqrt(n_samples)
+            # Entries in S with very small value ~0 (last few elements) could
+            # cause instability when inverted
+            A = np.diag(1 / S)
+        elif deg == 0:
+            # X_pca = X * V
+            A = np.eye(dim)
+        elif deg >= 1:
+            # X_antiwhite = X * V * (S / sqrt(n_samples))^deg
+            A = np.eye(dim)
+            for i in range(deg):
+                A = np.dot(A, np.diag(S))
+
+        A = np.dot(V, A)
+        if save:
+            self.transform_matrix_ = A
+        return A
+
+
     def fit(self, X):
         """Fit X. Assume that X has shape (n_samples, n_features)"""
 
@@ -110,6 +141,11 @@ class AntiWhiten:
             self.V_ = self.V_[:, :self.n_components]
             self.S_ = self.S_[:self.n_components]
 
+            # If deg is specified in constructor, save transformation matrix
+            if self.deg is not None:
+                self._set_transform_matrix(self.deg, self.n_components)
+
+
     def transform(self, X, deg=None, dim=None):
         """Transform X"""
 
@@ -120,32 +156,17 @@ class AntiWhiten:
 
         # If <n_components> was specified, use S, V directly; otherwise, keep
         # first <dim> components
-        if self.n_components is not None:
-            S = np.diag(self.S_)
-            V = self.V_
-        else:
+        if self.transform_matrix_ is None:
             dim = self._check_dim(dim, X.shape[1])
-            S = np.diag(self.S_[:dim])
-            V = self.V_[:, :dim]
+            deg = self._check_deg(deg)
+            A = self._set_transform_matrix(deg, dim, save=False)
+        else:
+            A = self.transform_matrix_
 
-        X_pca = np.dot(X_center, V)
-        deg = self._check_deg(deg)
-        if deg == -1:
-            # X_whiten = X * V / S * sqrt(n_samples) = U * sqrt(n_samples)
-            S_inv = np.diag(1 / self.S_)
-            X_proj = np.dot(X_pca, S_inv)
-        elif deg == 0:
-            # X_pca = X * V = U * S * V^T * V = U * S
-            X_proj = X_pca
-        elif deg >= 1:
-            # X_antiwhite = X * V * (S / sqrt(n_samples))^deg
-            X_proj = X_pca
-            for i in range(deg):
-                X_proj = np.dot(X_proj, S)
+        # Transform data and return
+        return np.dot(X_center, A)
 
-        return X_proj
-
-    def inverse_transform(self, X, deg=None, inv_option=1):
+    def inverse_transform(self, X, deg=None, inv_option=2):
         """
         Inverse transform projects X back to its original space based on
         inv_option:
@@ -158,18 +179,18 @@ class AntiWhiten:
         # If <n_components> was specified, use S, V directly; otherwise, keep
         # first <dim> components
         if self.n_components is not None:
-            S = np.diag(self.S_)
+            S = self.S_
             V = self.V_
         else:
-            dim = self._check_dim(dim, X.shape[1])
-            S = np.diag(self.S_[:dim])
+            dim = X.shape[1]
+            S = self.S_[:dim]
             V = self.V_[:, :dim]
 
         if inv_option == 1:
             deg = self._check_deg(deg)
             if deg == -1:
                 # X_whiten = X * V / S * sqrt(n_samples)
-                temp = np.dot(X, S)
+                temp = np.dot(X, np.diag(S))
                 X_inv = np.dot(temp, V.T)
             elif deg == 0:
                 # X_pca = X * V
@@ -178,7 +199,7 @@ class AntiWhiten:
                 # X_antiwhite = X * V * (S / sqrt(n_samples))^deg
                 temp = X
                 for i in range(deg):
-                    temp = np.dot(temp, np.linalg.inv(S))
+                    temp = np.dot(temp, np.diag(1 / S))
                 X_inv = np.dot(temp, V.T)
 
         elif inv_option == 2:

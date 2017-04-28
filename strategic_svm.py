@@ -4,7 +4,7 @@ import subprocess
 import os
 
 from lib.utils.svm_utils import *
-from lib.utils.data_utils import load_dataset, get_data_shape
+from lib.utils.data_utils import load_dataset, get_data_shape, preprocess
 from lib.utils.dr_utils import *
 from lib.attacks.svm_attacks import *
 
@@ -37,18 +37,23 @@ def main(argv):
 
     data_dict = get_data_shape(X_train, X_test)
     n_features = data_dict['no_of_features']
-
     # Reshape dataset to have dimensions suitable for SVM
-    X_train_flat = X_train.reshape(-1, n_features)
-    X_test_flat = X_test.reshape(-1, n_features)
+    X_train = X_train.reshape(-1, n_features)
+    X_test = X_test.reshape(-1, n_features)
     # Center dataset with mean of training set
-    mean = np.mean(X_train_flat, axis=0)
-    X_train_flat -= mean
-    X_test_flat -= mean
+    mean = np.mean(X_train, axis=0)
+    X_train -= mean
+    X_test -= mean
+
+    # Preprocess data if specified
+    M = None
+    if model_dict['preprocess'] is not None:
+        X_train, X_val, X_test, M = preprocess(
+            model_dict, X_train, X_val, X_test)
 
     # Create a new model or load an existing one
-    clf = model_creator(model_dict, X_train_flat, y_train)
-    model_tester(model_dict, clf, X_test_flat, y_test)
+    clf = model_creator(model_dict, X_train, y_train)
+    model_tester(model_dict, clf, X_test, y_test)
 
     # Assign parameters
     n_mag = 25                                 # No. of deviations to consider
@@ -56,7 +61,6 @@ def main(argv):
     # Reduced dimensions to use
     rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     strat_flag = 1
-    n_rd = len(rd_list)
     output_list = []
 
     # Clear old output files
@@ -88,22 +92,22 @@ def main(argv):
 
         # Dimension reduce dataset and reshape
         X_train_dr, _, dr_alg = dr_wrapper(
-            X_train_flat, X_test_flat, DR, rd, y_train, rev=rev_flag)
+            X_train, X_test, DR, rd, y_train, rev=rev_flag)
 
         # With dimension reduced dataset, create new model or load existing one
         clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
         # Modify classifier to include transformation matrix
-        clf = model_transform(model_dict, clf, dr_alg)
+        clf = model_transform(model_dict, clf, dr_alg, M)
         # Test model on original data
-        model_tester(model_dict, clf, X_test_flat, y_test, rd, rev_flag)
+        model_tester(model_dict, clf, X_test, y_test, rd, rev_flag)
 
         # Strategic attack: create new adv samples based on retrained clf
         print('Performing strategic attack...')
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf, X_test_flat, mean, dev_list[i])
+            X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i])
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
 
-            save_svm_images(model_dict, data_dict, X_test_flat, X_adv,
+            save_svm_images(model_dict, data_dict, X_test, X_adv,
                             dev_list[i], rd, dr_alg, rev_flag)
 
         fname = print_svm_output(model_dict, output_list, dev_list, rd,

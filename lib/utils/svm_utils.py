@@ -256,10 +256,11 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_transform(model_dict, clf, dr_alg):
+def model_transform(model_dict, clf, dr_alg, M):
     """
-    Modify SVM's decision function to take into account transformation
-    matrix to transform input data in original space
+    Modify SVM's decision function to take into account transformation matrix to
+    transform input data in original space. Assume SVM's weights are in row notation
+    or shape : [n_classes, n_components]
     """
 
     DR = model_dict['dim_red']
@@ -270,27 +271,18 @@ def model_transform(model_dict, clf, dr_alg):
     elif DR == 'pca-whiten':
         # This S is S / sqrt(n_samples)
         # Entries in S with very small value ~0 (last few elements) could cause
-        # stability problem when inverted 
+        # stability problem when inverted
         S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
         V = dr_alg.components_.T
         # A = (V / S).T
         A = np.dot(V, np.diag(S_inv)).T
     elif 'antiwhiten' in DR:
-        deg = int(DR.split('antiwhiten', 1)[1])
-        S = dr_alg.S_
-        if deg == -1:
-            A = np.diag(1 / S)
-        elif deg == 0:
-            A = np.eye(dr_alg.n_components)
-        elif deg >= 1:
-            A = np.eye(dr_alg.n_components)
-            for i in range(deg):
-                A = np.dot(A, np.diag(S))
-        A = np.dot(dr_alg.V_, A).T
+        A = dr_alg.transform_matrix_.T
     else:
         raise ValueError('Cannot get transformation matrix from this \
                           dimensionality reduction')
-
+    if M is not None:
+        A = np.dot(A, M.T)
     clf.coef_ = np.dot(clf.coef_, A)
     return clf
 #------------------------------------------------------------------------------#

@@ -223,34 +223,39 @@ def load_dataset_GTSRB(model_dict):
 #------------------------------------------------------------------------------#
 
 
-def preprocess(model_dict, data):
+def preprocess(model_dict, X_train, X_val, X_test):
     """
-    Preprocess data (tuple of X_train, y_train, X_val, y_val, X_test, y_test)
-    """
+    Preprocess data (X_train, X_val, X_test) fitted on X_train.
 
-    preprocess = model_dict['preprocess']
-    X_train, y_train, X_val, y_val, X_test, y_test = data
+    Returns
+    -------
+    X_train, X_val, X_test : preprocessed data (X = np.dot(X, A))
+    A : transformation matrix applied on data in row notation
+        [n_samples, n_features] assuming input data has been centered
+    """
 
     # Get data shape
     data_dict = get_data_shape(X_train, X_test, X_val)
     n_features = data_dict['no_of_features']
-    # Reshape data to [n_samples, n_features]
+    # Ensure that input data has shape [n_samples, n_features]
     X_train = X_train.reshape(-1, n_features)
     X_test = X_test.reshape(-1, n_features)
     X_val = X_val.reshape(-1, n_features)
 
     # Construct preprocessor
+    preprocess = model_dict['preprocess']
     if preprocess == 'std':
         # Preprocess with sklearn StandardScaler (zero mean, unit variance)
         pp = StandardScaler()
     elif preprocess == 'whiten':
         # Preprocess data by projecting to basis that covariance of data is an
         # identity matrix
-        pp = AntiWhiten(n_components=n_features, whiten=-1)
-    elif preprocess == 'antiwhiten':
+        pp = AntiWhiten(n_components=n_features, deg=-1)
+    elif 'antiwhiten' in preprocess:
+        deg = int(preprocess.split('antiwhiten', 1)[1])
         # Preprocess data by projecting to basis that covariance of data is
         # exponentiated to a certain degree (1)
-        pp = AntiWhiten(n_components=n_features, whiten=1)
+        pp = AntiWhiten(n_components=n_features, deg=deg)
     else:
         raise ValueError('Unrecognized preprocessing method')
 
@@ -260,7 +265,15 @@ def preprocess(model_dict, data):
     X_test = pp.transform(X_test)
     X_val = pp.transform(X_val)
 
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    # Retrieve transformation matrix
+    if preprocess == 'std':
+        A = np.diag(pp.scale_)
+    elif preprocess == 'whiten':
+        A = pp.transform_matrix_
+    elif preprocess == 'antiwhiten':
+        A = pp.transform_matrix_
+
+    return X_train, X_val, X_test, A
 #------------------------------------------------------------------------------#
 
 
@@ -269,16 +282,11 @@ def load_dataset(model_dict):
 
     dataset = model_dict['dataset']
     if dataset == 'MNIST':
-        data = load_dataset_MNIST(model_dict)
+        return load_dataset_MNIST(model_dict)
     elif dataset == 'GTSRB':
-        data = load_dataset_GTSRB(model_dict)
+        return load_dataset_GTSRB(model_dict)
     elif dataset == 'HAR':
-        data = load_dataset_HAR(model_dict)
-
-    if model_dict['preprocess'] is not None:
-        data = preprocess(model_dict, data)
-
-    return data
+        return load_dataset_HAR(model_dict)
 #------------------------------------------------------------------------------#
 
 
