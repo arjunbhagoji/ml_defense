@@ -12,7 +12,7 @@ from ..utils.attack_utils import *
 from ..utils.data_utils import *
 
 #------------------------------------------------------------------------------#
-def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
+def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red, rd, rev):
 
     """
     Performs Fast Sign Gradient attack and put perturbed examples in <adv_x>.
@@ -42,7 +42,7 @@ def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
+def fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red, rd, rev):
 
     """
     Performs Fast Gradient attack and put perturbed examples in <adv_x>.
@@ -60,17 +60,38 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
     """
 
     batch_len = x_curr.shape[0]
+    features_per_c = data_dict['features_per_c']
+    no_of_features = data_dict['no_of_features']
+    channels = data_dict['channels']
+    no_of_dim = data_dict['no_of_dim']
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
+    if rd != None and rev != None:
+        if dim_red == 'pca':
+            U_k = dr_alg.components_
+            delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), U_k.T)
+            delta_x = np.dot(delta_x, U_k)
     # Calulating norm of gradient
-    channels = x_curr.shape[1]
-    if rd == None or rev != None:
-        n_features = x_curr.shape[2]*x_curr.shape[3]
+    if no_of_dim == 2:
+        delta_x_norm = np.linalg.norm(delta_x, axis=1)
+    elif no_of_dim == 3:
         delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                      n_features), axis=2)
-    elif rd != None and rev == None:
-        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels, rd),
-                                      axis=2)
+                                      features_per_c), axis=2)
+        delta_x = delta_x.reshape(batch_len, channels, features_per_c)
+    elif no_of_dim == 4:
+        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+                                      features_per_c), axis=2)
+        height = data_dict['height']
+        width = data_dict['width']
+        delta_x = delta_x.reshape(batch_len, channels, height, width)
+    # if no_of_dim == 2:
+    # if rd == None or rev != None:
+    #     n_features = x_curr.shape[2]*x_curr.shape[3]
+    #     delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+    #                                   n_features), axis=2)
+    # elif rd != None and rev == None:
+    #     delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels, rd),
+    #                                   axis=2)
 
     # Perturbed images
     for i in range(batch_len):
@@ -89,7 +110,7 @@ def fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev):
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
-                   dev_list, X_test, y_test, rd=None, rev=None):
+                   dev_list, X_test, y_test, dr_alg=None, rd=None, rev=None):
 
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
@@ -111,6 +132,7 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     no_of_dim = data_dict['no_of_dim']
     channels = data_dict['channels']
     no_of_features = data_dict['no_of_features']
+    dim_red = model_dict['dim_red']
 
     n_mags = len(dev_list)
     # Creating array to store adversarial samples
@@ -143,9 +165,11 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
             if model_dict['attack'] == 'fgs':
-                fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev)
+                fgs(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
+                    dr_alg, dim_red, rd, rev)
             elif model_dict['attack'] == 'fg':
-                fg(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, rd, rev)
+                fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
+                   dr_alg, dim_red, rd, rev)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,

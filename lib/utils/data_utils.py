@@ -221,6 +221,19 @@ def load_dataset_GTSRB(model_dict):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
+def load_dataset_HAR(model_dict):
+    abs_path_i = resolve_path_i(model_dict)
+    X_train = np.loadtxt(abs_path_i+'train/X_train.txt')
+    y_train = np.loadtxt(abs_path_i+'train/y_train.txt')
+    X_test = np.loadtxt(abs_path_i+'test/X_test.txt')
+    y_test = np.loadtxt(abs_path_i+'test/y_test.txt')
+
+    y_train = y_train - 1
+    y_test = y_test - 1
+    return X_train, y_train, X_test, y_test
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
 def load_dataset(model_dict):
 
     """
@@ -273,9 +286,10 @@ def get_data_shape(X_train, X_test, X_val=None):
         channels = X_train.shape[1]
         height = X_train.shape[2]
         width = X_train.shape[3]
-        no_of_features = channels*height*width
+        features_per_c = height*width
+        no_of_features = channels*features_per_c
         data_dict.update({'height':height, 'width':width, 'channels':channels,
-                          'no_of_features':no_of_features})
+                          'features_per_c':features_per_c,'no_of_features':no_of_features})
 
     return data_dict
 #------------------------------------------------------------------------------#

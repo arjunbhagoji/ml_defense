@@ -22,7 +22,7 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     """
 
     # Parameters
-    rev_flag = 1
+    rev_flag = None
     dim_red = model_dict['dim_red']
 
     data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
@@ -32,7 +32,7 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     # print ("Starting attack...")
     adv_x_all, output_list = attack_wrapper(model_dict, data_dict, input_var,
                                             target_var, test_prediction,
-                                            dev_list, X_test, y_test, rd,
+                                            dev_list, X_test, y_test, dr_alg, rd,
                                             rev=rev_flag)
     #
     # # Printing result to file
@@ -40,9 +40,9 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
                  rev=rev_flag, strat_flag=1)
 
     # Save adv. samples to images
-    if (dim_red == 'pca') or (dim_red == 'dca') or (dim_red == None):
-        save_images(model_dict, data_dict, X_test, adv_x_all, dev_list,
-                    rd, dr_alg, rev=rev_flag)
+    # if (dim_red == 'pca') or (dim_red == 'dca') or (dim_red == None):
+    #     save_images(model_dict, data_dict, X_test, adv_x_all, dev_list,
+    #                 rd, dr_alg, rev=rev_flag)
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#
@@ -57,8 +57,8 @@ def main():
     model_dict = model_dict_create()
 
     # Reduced dimensions used
-    # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-    rd_list = [784]
+    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    # rd_list = [784]
     # No. of deviations to consider
     no_of_mags = 50
     dev_list = np.linspace(0.1, 5.0, no_of_mags)

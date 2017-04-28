@@ -129,6 +129,8 @@ def svm_model_dict_create():
             model_dict.update({'classes':10})
         elif (model_dict['dataset'] == 'GTSRB'):
             model_dict.update({'classes':43})
+        elif (model_dict['dataset'] == 'HAR'):
+            model_dict.update({'classes':6})
 
     return model_dict
 #------------------------------------------------------------------------------#

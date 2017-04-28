@@ -54,7 +54,7 @@ set style line 24 lt rgb "#F79CD4" lw 4
 # {15,207,192}  "#0FCFC0"
 # {247,156,212} "#F79CD4"
 
-set output "plots/fg_mnist_nn_2_100_strat_PCA.png"
+set output "plots/fg_mnist_nn_2_100_strat_pca.png"
 
 set xlabel 'r$\eta$'
 set ylabel '\small{Adversarial success (\%)}' offset 2
@@ -64,11 +64,11 @@ set yrange [0:100]
 set key right bottom
 set title 'Strategic FG Attack on NN'
 
-plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
 unset output
 
-set output "plots/fg_mnist_nn_2_100_strat_rev_PCA.png"
+set output "plots/fg_mnist_nn_FC_2_100_strat_rev_pca.png"
 
 set xlabel 'r$\eta$'
 set ylabel '\small{Adversarial success (\%)}' offset 2
@@ -78,7 +78,7 @@ set yrange [0:100]
 set key right bottom
 set title 'Strategic FG Attack on NN'
 
-plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_rev_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
 unset output
 
@@ -110,20 +110,6 @@ plot for [IDX=0:6] 'svm_output_data/MNIST/svm_linear_cls10_l2_C1.0_strat_rp.txt'
 
 unset output
 
-set output "plots/fgs_mnist_nn_2_100_strat_rev_PCA.png"
-
-set xlabel 'r$\eta$'
-set ylabel '\small{Adversarial success (\%)}' offset 2
-set xrange [0:0.5]
-set yrange [0:100]
-# set margins 3, 1, 2, 2
-set key right bottom
-set title 'Strategic FGS Attack on NN'
-
-plot for [IDX=0:6] 'output_data/MNIST/fgs_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
-
-unset output
-
 set output 'plots/svm_linear_cls10_l2_pca_rev.png'
 
 set xlabel '\small{Average minimum adversarial perturbation}'
@@ -146,3 +132,47 @@ for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-05_pca_rev.
 1e20 w points ls 4 ps 2 title '1e-03', \
 1e20 w points ls 5 ps 2 title '1e-04', \
 1e20 w points ls 6 ps 2 title '1e-05'
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_strat_rev_pca_reg_l2.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on NN'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_reg_l2_strat_rev_pca_reg_l2.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_strat_rev_pca_reg_l2.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on NN'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_reg_l2_strat_rev_pca_reg_l2.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fgs_mnist_nn_2_100_strat_rev_PCA.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:0.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FGS Attack on NN'
+
+plot for [IDX=0:6] 'output_data/MNIST/fgs_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output

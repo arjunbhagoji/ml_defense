@@ -58,7 +58,7 @@ set style line 24 lt rgb "#F79CD4" lw 4
 # {247,156,212} "#F79CD4"
 
 string_p = 'plots/'
-string_o = 'svm_output_data/MNIST/'
+string_o = 'svm_output_data/HAR/'
  #filename = 'svm_linear_cls10_l2_C0.01_strat_pca_rev.png'
  #in_name = 'svm_linear_cls10_l2_C0.01_strat_pca_rev.txt'
 

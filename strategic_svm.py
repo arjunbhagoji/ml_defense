@@ -21,7 +21,7 @@ def main(argv):
     # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
     DR = model_dict['dim_red']
-    rev_flag = 1
+    rev_flag = None
 
     # Load dataset and create data_dict to store metadata
     print('Loading data...')
@@ -45,12 +45,17 @@ def main(argv):
     # Create a new model or load an existing one
     clf = model_creator(model_dict, X_train_flat, y_train)
     model_tester(model_dict, clf, X_test_flat, y_test)
+    for i in range(model_dict['classes']):
+        print np.linalg.norm(clf.coef_[i])
 
     # Assign parameters
     n_mag = 25                                # No. of deviations to consider
     dev_list = np.linspace(0.1, 2.5, n_mag)    # A list of deviations mag.
-    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
-    # rd_list = [784, 100]
+    if dataset == 'MNIST':
+        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
+        # rd_list = [784, 100]
+    elif dataset == 'HAR':
+        rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     n_rd = len(rd_list)
     output_list = []
 
@@ -61,7 +66,7 @@ def main(argv):
             X_adv, y_ini = mult_cls_atk(clf, X_test_flat, dev_list[i])
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
             save_svm_images(model_dict, data_dict, X_test, X_adv, dev_list[i])
-        fname = print_svm_output(model_dict, output_list, dev_list)
+        # fname = print_svm_output(model_dict, output_list, dev_list)
     #     # subprocess.call(["gnuplot -e \"filename='{}.png'; in_name='{}.txt'\" gnu_in_loop.plg".format(fname,fname)], shell=True)
     # else:
     #     # TODO: 2 classes
@@ -75,16 +80,18 @@ def main(argv):
         print('Reduced dimensions: {}'.format(rd))
 
         # Dimension reduce dataset and reshape
-        X_train_dr, X_test_dr, X_val_dr, dr_alg = dr_wrapper(X_train_flat,
-                                                            X_test_flat,
-                                                        DR, rd, X_val,rev_flag)
+        X_train_dr, X_test_dr, dr_alg = dr_wrapper(X_train_flat, X_test_flat,
+                                                        DR, rd, rev_flag)
 
-        # X_train_dr = X_train_dr.reshape(-1, rd)
-        # X_test_dr = X_test_dr.reshape(-1, rd)
+        X_train_dr = X_train_dr.reshape(-1, rd)
+        X_test_dr = X_test_dr.reshape(-1, rd)
 
         # With dimension reduced dataset, create new model or load existing one
         clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
         model_tester(model_dict, clf, X_test_dr, y_test, rd, rev_flag)
+        clf_mod = np.dot(clf.coef_, dr_alg.components_)
+        for i in range(model_dict['classes']):
+            print np.linalg.norm(clf_mod[i,:])
 
         # Strategic attack: create new adv samples based on retrained clf
         print('Performing strategic attack...')
@@ -92,12 +99,13 @@ def main(argv):
             X_adv, y_ini = mult_cls_atk(clf, X_test_dr, dev_list[i], rd,
                                         rev_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-            if (DR == 'pca') or (DR == 'dca') or (DR == None):
-                save_svm_images(model_dict, data_dict, X_test_dr, X_adv,
-                                    dev_list[i], rd, dr_alg, rev_flag)
+            # if (DR == 'pca') or (DR == 'dca') or (DR == None):
+            #     save_svm_images(model_dict, data_dict, X_test_dr, X_adv,
+            #                         dev_list[i], rd, dr_alg, rev_flag)
         fname = print_svm_output(model_dict, output_list, dev_list, rd, strat_flag,
                          rev_flag)
 
+    fname = dataset +'_' + fname
     subprocess.call(["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
 #------------------------------------------------------------------------------#
 
