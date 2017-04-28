@@ -22,6 +22,7 @@ def main(argv):
     model_dict = svm_model_dict_create()
     DR = model_dict['dim_red']
     rev_flag = model_dict['rev']
+    strat_flag = 1
 
     # Load dataset and create data_dict to store metadata
     print('Loading data...')
@@ -49,8 +50,7 @@ def main(argv):
     # Create a new model or load an existing one
     clf = model_creator(model_dict, X_train_flat, y_train)
     model_tester(model_dict, clf, X_test_flat, y_test)
-    for i in range(model_dict['classes']):
-        print np.linalg.norm(clf.coef_[i])
+
 
     # Assign parameters
     n_mag = 25                                 # No. of deviations to consider
@@ -63,19 +63,20 @@ def main(argv):
 
     n_rd = len(rd_list)
     output_list = []
-
+    clear_flag = None
     # Clear old output files
-    abs_path_o = resolve_path_o(model_dict)
-    _, fname = file_create(model_dict)
-    os.remove(abs_path_o + fname + '.txt')
-    _, fname = file_create(model_dict, rd=1, strat=strat_flag, rev=rev_flag)
-    os.remove(abs_path_o + fname + '.txt')
+    if clear_flag ==1:
+        abs_path_o = resolve_path_o(model_dict)
+        _, fname = file_create(model_dict)
+        os.remove(abs_path_o + fname + '.txt')
+        _, fname = file_create(model_dict, rd=1, strat=strat_flag, rev=rev_flag)
+        os.remove(abs_path_o + fname + '.txt')
 
     # Test clf against adv. samples
     print('Performing attack...')
     if model_dict['classes'] != 2:
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf, X_test_flat, dev_list[i])
+            X_adv, y_ini = mult_cls_atk(clf, X_test_flat, mean, dev_list[i])
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
             save_svm_images(model_dict, data_dict, X_test, X_adv, dev_list[i])
         fname = print_svm_output(model_dict, output_list, dev_list)

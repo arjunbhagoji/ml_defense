@@ -154,7 +154,7 @@ def invert_dr(X, dr_alg, DR):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def dr_wrapper(X_train, X_test, DR, rd, y_train, X_val=None, rev=None):
+def dr_wrapper(X_train, X_test, DR, rd, y_train, rev=None, X_val = None):
     """
     A wrapper function for dimensionality reduction functions.
     """
