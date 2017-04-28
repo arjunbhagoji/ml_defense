@@ -102,26 +102,28 @@ def model_loader(model_dict, rd=None, DR=None, rev=None):
     Load parameters of the saved Lasagne model
     """
 
-    model_name = model_dict['model_name']
+    mname = get_model_name(model_dict, rd, rev)
     abs_path_m = resolve_path_m(model_dict)
 
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
-    elif model_name == 'mlp':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    model_path = abs_path_m + mname
 
-    reg = model_dict['reg']
-
-    if rd != None: model_path += '_{}_{}'.format(rd, DR)
-    if rev != None: model_path += '_rev'
-    if reg != None: model_path += '_reg_{}'.format(reg)
-    if model_name == 'custom': model_path += '_drop'
+    # if model_name == 'cnn':
+    #     model_path = abs_path_m + 'cnn_{}_{}_papernot'.format(depth, width)
+    # elif model_name == 'mlp':
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    # elif model_name == 'custom':
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    #
+    # reg = model_dict['reg']
+    #
+    # if rd != None: model_path += '_{}_{}'.format(rd, DR)
+    # if rev != None: model_path += '_rev'
+    # if reg != None: model_path += '_reg_{}'.format(reg)
+    # if model_name == 'custom': model_path += '_drop'
     with np.load(model_path + '.npz') as f:
         param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
     return param_values
@@ -134,27 +136,32 @@ def model_saver(network, model_dict, rd=None, rev=None):
     Save model parameters in model foler as .npz file compatible with Lasagne
     """
 
-    model_name = model_dict['model_name']
+    mname = get_model_name(model_dict, rd, rev)
     abs_path_m = resolve_path_m(model_dict)
-    DR = model_dict['dim_red']
 
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
-    elif model_name == 'mlp':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    model_path = abs_path_m + mname
 
-    reg = model_dict['reg']
-
-    if rd != None: model_path += '_{}_{}'.format(rd, DR)
-    if rev != None: model_path += '_rev'
-    if reg != None: model_path += '_reg_{}'.format(reg)
-    if model_name == 'custom': model_path += '_drop'
+    # model_name = model_dict['model_name']
+    # abs_path_m = resolve_path_m(model_dict)
+    # DR = model_dict['dim_red']
+    #
+    # if model_name == 'cnn':
+    #     model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
+    # elif model_name == 'mlp':
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    # elif model_name == 'custom':
+    #     depth = model_dict['depth']
+    #     width = model_dict['width']
+    #     model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    #
+    # reg = model_dict['reg']
+    #
+    # if rd != None: model_path += '_{}_{}'.format(rd, DR)
+    # if rev != None: model_path += '_rev'
+    # if reg != None: model_path += '_reg_{}'.format(reg)
+    # if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#
 
@@ -171,7 +178,7 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
         # Doing dimensionality reduction on dataset
         print("Doing {} with rd={} over the training data".format(dim_red, rd))
         X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red,
-                                                    rd, X_val, rev)
+                                                    rd, rev, X_val)
     else: dr_alg = None
 
     # Getting data parameters after dimensionality reduction
