@@ -112,7 +112,7 @@ def anti_whiten_dr(X_train, X_test, rd, X_val=None, rev=None, **kwargs):
 
     deg = kwargs['deg']
     # Fit X_train
-    anti_whiten = AntiWhiten(n_components=rd, whiten=deg)
+    anti_whiten = AntiWhiten(n_components=rd, deg=deg)
     anti_whiten.fit(X_train)
 
     # Transform X_train and X_test
@@ -143,9 +143,9 @@ def invert_dr(X, dr_alg, DR):
     Inverse transform data <X> in reduced dimension back to its full dimension
     """
 
-    inv_list = ['pca', 'pca-whiten', 'dca', 'antiwhiten']
+    inv_list = ['pca', 'pca-whiten', 'dca']
 
-    if DR in inv_list:
+    if (DR in inv_list) or ('antiwhiten' in DR):
         X_rev = dr_alg.inverse_transform(X)
     else:
         raise ValueError('Cannot invert specified DR')

@@ -216,9 +216,7 @@ def model_loader(model_dict, rd=None, rev=None):
 
 
 def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
-    """
-    Trains and returns SVM. Also save SVM to file.
-    """
+    """Trains and returns SVM. Also save SVM to file."""
 
     print('Training model...')
     start_time = time.time()
@@ -229,13 +227,16 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
     # Create model based on parameters
     if svm_model == 'linear':
-        clf = svm.LinearSVC(C=C, penalty=penalty, dual=False)
+        dual = True
+        if penalty == 'l1':
+            dual = False
+        clf = svm.LinearSVC(C=C, penalty=penalty, dual=dual)
     elif svm_model != 'linear':
         clf = svm.SVC(C=C, kernel=svm_model)
 
     # Train model
     clf.fit(X_train, y_train)
-    print('Finish training in {}s'.format(time.time() - start_time))
+    print('Finish training in {:d}s'.format(int(time.time() - start_time)))
 
     # Save model
     joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
@@ -244,15 +245,53 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
 
 def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
-    """
-    Returns a SVM classifier
-    """
+    """Returns a SVM classifier"""
 
     # Load model based on model_dict
     clf = model_loader(model_dict, rd, rev)
     # If model does not exist, train a new SVM
     if clf is None:
         clf = model_trainer(model_dict, X_train, y_train, rd, rev)
+    return clf
+#------------------------------------------------------------------------------#
+
+
+def model_transform(model_dict, clf, dr_alg):
+    """
+    Modify SVM's decision function to take into account transformation
+    matrix to transform input data in original space
+    """
+
+    DR = model_dict['dim_red']
+
+    # A is transformation matrix of dr_alg
+    if DR == 'pca':
+        A = dr_alg.components_
+    elif DR == 'pca-whiten':
+        # This S is S / sqrt(n_samples)
+        # Entries in S with very small value ~0 (last few elements) could cause
+        # stability problem when inverted 
+        S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
+        V = dr_alg.components_.T
+        # A = (V / S).T
+        A = np.dot(V, np.diag(S_inv)).T
+    elif 'antiwhiten' in DR:
+        deg = int(DR.split('antiwhiten', 1)[1])
+        S = dr_alg.S_
+        if deg == -1:
+            A = np.diag(1 / S)
+        elif deg == 0:
+            A = np.eye(dr_alg.n_components)
+        elif deg >= 1:
+            A = np.eye(dr_alg.n_components)
+            for i in range(deg):
+                A = np.dot(A, np.diag(S))
+        A = np.dot(dr_alg.V_, A).T
+    else:
+        raise ValueError('Cannot get transformation matrix from this \
+                          dimensionality reduction')
+
+    clf.coef_ = np.dot(clf.coef_, A)
     return clf
 #------------------------------------------------------------------------------#
 
@@ -270,8 +309,6 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     else:
         # norm is arbritarily set to one for kernel SVM
         norm = np.ones(model_dict['classes'])
-    # Distance from each sample to hyperplane of each class
-    dist = clf.decision_function(X_test)
 
     test_len = len(X_test)
     sum_dist = 0
@@ -280,9 +317,8 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
         if predicted_labels[i] == y_test[i]:
             n_correct += 1
             # Sum normalized distance to sept. hyperplane
-            min_index, min_dist = min_dist_calc(X_test[i], clf)
+            _, min_dist = min_dist_calc(X_test[i], clf)
             sum_dist += min_dist
-            # sum_dist += dist[i,y_test[i]] / norm[y_test[i]]
 
     DR = model_dict['dim_red']
     # Resolve path to utility output file
@@ -383,18 +419,15 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
     no_of_features = data_dict['no_of_features']
     height = int(np.sqrt(no_of_features))
     width = height
-    if (rd is not None) and (rev is None):
-        X_curr = invert_dr(X_curr, dr_alg, DR)
-    # elif rd == None or (rd != None and rev != None):
-    #     height = X_test.shape[2]
-    #     width = X_test.shape[3]
+
+    # TODO: invert preprocessing
+    # if model_dict['preprocess'] is not None:
 
     channels = 1
     if channels == 1:
         if (rd is not None) and (rev is None):
             # Invert dr samples to their original space
-            adv_x_curr = invert_dr(adv_x[indices, :], dr_alg, DR)
-            np.clip(adv_x_curr, 0, 1)
+            adv_x_curr = adv_x[indices, :] + dr_alg.mean_
             for i in indices:
                 adv = adv_x_curr[i].reshape((height, width))
                 orig = X_curr[i].reshape((height, width))
