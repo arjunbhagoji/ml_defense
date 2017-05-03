@@ -22,22 +22,23 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     """
 
     # Parameters
-    rev_flag = None
+    rev_flag = model_dict['rev']
+    layer_flag = None
     dim_red = model_dict['dim_red']
 
     data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
         model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val,
-                    rd, rev=rev_flag)
+                    rd, layer=layer_flag)
 
     # print ("Starting attack...")
     adv_x_all, output_list = attack_wrapper(model_dict, data_dict, input_var,
                                             target_var, test_prediction,
-                                            dev_list, X_test, y_test, dr_alg, rd,
-                                            rev=rev_flag)
+                                            dev_list, X_test, y_test, dr_alg, rd
+                                            )
     #
     # # Printing result to file
     print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
-                 rev=rev_flag, strat_flag=1)
+                 strat_flag=1)
 
     # Save adv. samples to images
     # if (dim_red == 'pca') or (dim_red == 'dca') or (dim_red == None):
@@ -57,8 +58,7 @@ def main():
     model_dict = model_dict_create()
 
     # Reduced dimensions used
-    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-    # rd_list = [784]
+
     # No. of deviations to consider
     no_of_mags = 50
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
@@ -68,8 +68,21 @@ def main():
     dataset = model_dict['dataset']
     if (dataset == 'MNIST') or (dataset == 'GTSRB'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        # rd_list = [784]
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
+
+    # data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
+    #     model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)
+    #
+    # # Running attack and saving samples
+    # print('Creating adversarial samples...')
+    # adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
+    #                                     target_var, test_prediction, dev_list,
+    #                                     X_test, y_test)
+    # print_output(model_dict, output_list, dev_list)
+    # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # partial_strategic_attack=partial(strategic_attack,X_train=X_train,
     # y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)

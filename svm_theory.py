@@ -59,15 +59,15 @@ def main():
     test_len = data_dict['test_len']
     no_of_features = data_dict['no_of_features']
 
-    var_array = np.sqrt(np.var(X_test, axis=0))
+    var_array = np.sqrt(np.var(X_test_flat, axis=0))
     var_list = list(var_array)
-    coef_list = list(clf.coef_[0,:])
+    coef_list = list(abs(clf.coef_[0,:]))
 
     coef_var_list.append(zip(var_list, coef_list))
 
     if dataset == 'MNIST':
-        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
-        rd_list = [784, 100]
+        rd_list = [331, 100, 80, 60, 40, 20]    # Reduced dimensions to use
+        # rd_list = [784, 100]
     elif dataset == 'HAR':
         rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
@@ -85,18 +85,17 @@ def main():
         # Test model on original data
         model_tester(model_dict, clf, X_test_flat, y_test, rd, rev_flag)
 
-        ofile.write('No_'+ DR +'\n')
+        ofile.write(DR+'_{}\n'.format(rd))
         for i in range(model_dict['classes']):
             ofile.write('{},{} \n'.format(i, np.linalg.norm(clf.coef_[i])))
         ofile.write('\n\n')
 
         no_of_features = data_dict['no_of_features']
 
-        coef_list_dr = list(clf.coef_[0,:])
-
+        coef_list_dr = list(abs(clf.coef_[0,:]))
         coef_var_list.append(zip(var_list, coef_list_dr))
 
-    mag_var_scatter(model_dict, coef_var_list, len(rd_list)+1)
+    mag_var_scatter(model_dict, coef_var_list, len(rd_list)+1, rd, rev_flag)
 
 if __name__ == "__main__":
     main()

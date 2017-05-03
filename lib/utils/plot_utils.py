@@ -4,7 +4,7 @@ import matplotlib
 from lib.utils.svm_utils import *
 
 #------------------------------------------------------------------------------#
-def mag_var_scatter(model_dict, gradient_var_list, no_of_dims):
+def mag_var_scatter(model_dict, gradient_var_list, no_of_dims, rd = None, rev = None):
 
     """
     Create a scatter plot of gradient of model vs. variance for each dimension
@@ -24,10 +24,12 @@ def mag_var_scatter(model_dict, gradient_var_list, no_of_dims):
     ax.tick_params(labelcolor='None', top='off', bottom='off', left='off',
                    right='off')
     plt.xlabel('Standard deviation of component')
-    plt.ylabel('Magnitude of average gradient of component')
+    plt.ylabel(r'Magnitude of coefficient of $w$')
     plt.title('Magnitude-variance scatter plot')
-    abs_path_v = resolve_path_v(model_dict)
-    fname = get_svm_model_name(model_dict)
-    plt.savefig(abs_path_v+fname,bbox_inches = 'tight')
+    abs_path = resolve_path()
+    rel_path_p = 'plots/'
+    abs_path_p = os.path.join(abs_path, rel_path_p)
+    fname = get_svm_model_name(model_dict, rd, rev) + '_scatter'
+    plt.savefig(abs_path_p + fname, bbox_inches = 'tight')
 
 #------------------------------------------------------------------------------#

@@ -29,6 +29,22 @@ set style line 3 lt rgb "#5555DD" lw 4 pt 2
 set style line 4 lt rgb "#FF5500" lw 4 pt 9
 set style line 5 lt rgb "#00AA55" lw 4 pt 5
 set style line 6 lt rgb "#0000A0" lw 4 pt 4
+set style line 7 lt rgb "#0000A0" lw 4 pt 1
+set style line 8 lt rgb "#0000A0" lw 4 pt 2
+set style line 9 lt rgb "#0000A0" lw 4 pt 9
+set style line 10 lt rgb "#00AA55" lw 4 pt 9
+set style line 25 lt rgb "#0000A0" lw 4 pt 5
+set style line 26 lt rgb "#5555DD" lw 4 pt 1
+set style line 27 lt rgb "#5555DD" lw 4 pt 6
+set style line 28 lt rgb "#5555DD" lw 4 pt 9
+set style line 29 lt rgb "#5555DD" lw 4 pt 5
+set style line 30 lt rgb "#5555DD" lw 4 pt 4
+set style line 31 lt rgb "#AA0000" lw 4 pt 6
+set style line 32 lt rgb "#AA0000" lw 4 pt 2
+set style line 33 lt rgb "#AA0000" lw 4 pt 9
+set style line 34 lt rgb "#AA0000" lw 4 pt 5
+
+
 
 set style line 11 lt rgb "#AA0000" lw 4
 set style line 12 lt rgb "#00AA00" lw 4
@@ -110,7 +126,7 @@ plot for [IDX=0:6] 'svm_output_data/MNIST/svm_linear_cls10_l2_C1.0_strat_rp.txt'
 
 unset output
 
-set output 'plots/svm_linear_cls10_l2_pca_rev.png'
+set output 'plots/MNIST_svm_linear_cls10_l2_pca_rev.png'
 
 set xlabel '\small{Average minimum adversarial perturbation}'
 set ylabel '\small{Accuracy on benign data}'
@@ -163,16 +179,199 @@ plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_reg_l2_strat_rev_pca_reg_l2
 
 unset output
 
-set output "plots/fgs_mnist_nn_2_100_strat_rev_PCA.png"
+set output "plots/fg_mnist_nn_FC_2_100_strat_antiwhiten1.png"
 
 set xlabel 'r$\eta$'
 set ylabel '\small{Adversarial success (\%)}' offset 2
-set xrange [0:0.5]
+set xrange [0:2.5]
 set yrange [0:100]
 # set margins 3, 1, 2, 2
 set key right bottom
-set title 'Strategic FGS Attack on NN'
+set title 'Strategic FG Attack on NN'
 
-plot for [IDX=0:6] 'output_data/MNIST/fgs_nn_2_100_strat_rev_PCA.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_antiwhiten1.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/HAR_svm_linear_cls6_l2_C1e+00_pca.png"
+
+set xlabel 'r$\epsilon$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:1]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic Attack on svm_linear_cls6_l2_C1e+00 with pca'
+
+plot for [IDX=0:6] 'svm_output_data/HAR/svm_linear_cls6_l2_C1e+00_strat_pca.txt' i (2*IDX) u 1:4 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_pca_retrain.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:5.0]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Vanilla FG Attack on FC_2_100 with retrain defense'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_pca_retrain.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_antiwhiten1_retrain.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Vanilla FG Attack on FC_2_100 with retrain defense'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_antiwhiten1_retrain.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_antiwhiten1_strat_rev.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on FC_2_100 with antiwhiten1'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_rev_antiwhiten1.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100relu_strat_rev_pca.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on FC_2_100_relu with pca'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100relu_strat_rev_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output "plots/fg_mnist_nn_FC_2_100_strat_rev_pca_reg_l2_layers.png"
+
+set xlabel 'r$\eta$'
+set ylabel '\small{Adversarial success (\%)}' offset 2
+set xrange [0:2.5]
+set yrange [0:100]
+# set margins 3, 1, 2, 2
+set key right bottom
+set title 'Strategic FG Attack on FC_2_100 with layer 1 reg.'
+
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_reg_l2_strat_pca_reg_l2_layers.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+
+unset output
+
+set output 'plots/HAR_svm_linear_cls6_l2_pca.png'
+
+set xlabel '\small{Average minimum adversarial perturbation}'
+set ylabel '\small{Accuracy on benign data}'
+set xrange [0:2.0]
+set yrange [60:100]
+# set margins 3, 1, 2, 2
+# set key right bottom
+set title 'HAR Linear SVM accuracy/robustness tradeoff'
+
+plot for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e+00_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 1 ps 2 offset character 0,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e-01_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 2 ps 2 offset character 1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e-02_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 3 ps 2 offset character -1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e-03_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 4 ps 2 offset character 0,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e-04_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 5 ps 2 offset character -1,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/HAR/utility_svm_linear_cls6_l2_C1e-05_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 6 ps 2 offset character 1,character 1 notitle, \
+1e20 w points ls 1 ps 2 title '1e+00', \
+1e20 w points ls 2 ps 2 title '1e-01', \
+1e20 w points ls 3 ps 2 title '1e-02', \
+1e20 w points ls 4 ps 2 title '1e-03', \
+1e20 w points ls 5 ps 2 title '1e-04', \
+1e20 w points ls 6 ps 2 title '1e-05'
+
+unset output
+
+set output 'plots/MNIST_svm_linear_cls10_l2_pca.png'
+
+set xlabel '\small{Average minimum adversarial perturbation}'
+set ylabel '\small{Accuracy on benign data}'
+set xrange [0:2.0]
+set yrange [60:100]
+# set margins 3, 1, 2, 2
+# set key right bottom
+set title 'MNIST Linear SVM accuracy/robustness tradeoff'
+
+plot for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 1 ps 2 offset character 0,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-01_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 2 ps 2 offset character 1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-02_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 3 ps 2 offset character -1,character -1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-03_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 4 ps 2 offset character 0,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-04_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 5 ps 2 offset character -1,character 1 notitle, \
+for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-05_pca.txt' i (3*IDX) u 3:2:1 w labels point ls 6 ps 2 offset character 1,character 1 notitle, \
+1e20 w points ls 1 ps 2 title '1e+00', \
+1e20 w points ls 2 ps 2 title '1e-01', \
+1e20 w points ls 3 ps 2 title '1e-02', \
+1e20 w points ls 4 ps 2 title '1e-03', \
+1e20 w points ls 5 ps 2 title '1e-04', \
+1e20 w points ls 10 ps 2 title '1e-05'
+
+unset output
+
+set output 'plots/MNIST_svm_linear_cls10_l2_antiwhiten.png'
+
+set xlabel '\small{Average minimum adversarial perturbation}'
+set ylabel '\small{Accuracy on benign data}'
+set xrange [0:2.0]
+set yrange [60:100]
+# set margins 3, 1, 2, 2
+# set key right bottom
+set title 'MNIST Linear SVM with antiwhiten1 accuracy/robustness tradeoff'
+
+plot 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+01_antiwhiten1.txt' u 3:2:1 w labels point ls 1 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+01_antiwhiten2.txt' u 3:2:1 w labels point ls 2 ps 2 offset character 1,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+01_antiwhiten3.txt' u 3:2:1 w labels point ls 3 ps 2 offset character -1,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_antiwhiten1.txt' u 3:2:1 w labels point ls 4 ps 2 offset character 0,character 1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_antiwhiten2.txt' u 3:2:1 w labels point ls 5 ps 2 offset character -1,character 1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_antiwhiten3.txt' u 3:2:1 w labels point ls 6 ps 2 offset character 1,character 1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-01_antiwhiten1.txt' u 3:2:1 w labels point ls 7 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-01_antiwhiten2.txt' u 3:2:1 w labels point ls 8 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-01_antiwhiten3.txt' u 3:2:1 w labels point ls 9 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-02_antiwhiten1.txt' u 3:2:1 w labels point ls 10 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-02_antiwhiten2.txt' u 3:2:1 w labels point ls 25 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-02_antiwhiten3.txt' u 3:2:1 w labels point ls 26 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-03_antiwhiten1.txt' u 3:2:1 w labels point ls 27 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-03_antiwhiten2.txt' u 3:2:1 w labels point ls 28 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-03_antiwhiten3.txt' u 3:2:1 w labels point ls 29 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-04_antiwhiten1.txt' u 3:2:1 w labels point ls 30 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-04_antiwhiten2.txt' u 3:2:1 w labels point ls 31 ps 2 offset character 0,character -1 notitle, \
+'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e-04_antiwhiten3.txt' u 3:2:1 w labels point ls 32 ps 2 offset character 0,character -1 notitle, \
+1e20 w points ls 1 ps 2 title '1,1e+01', \
+1e20 w points ls 2 ps 2 title '2,1e+01', \
+1e20 w points ls 3 ps 2 title '3,1e+01', \
+1e20 w points ls 4 ps 2 title '1,1e+00', \
+1e20 w points ls 5 ps 2 title '2,1e+00', \
+1e20 w points ls 6 ps 2 title '3,1e+00', \
+1e20 w points ls 7 ps 2 title '1,1e-01', \
+1e20 w points ls 8 ps 2 title '2,1e-01', \
+1e20 w points ls 9 ps 2 title '3,1e-01', \
+1e20 w points ls 10 ps 2 title '1,1e-02', \
+1e20 w points ls 25 ps 2 title '2,1e-02', \
+1e20 w points ls 26 ps 2 title '3,1e-02', \
+1e20 w points ls 27 ps 2 title '1,1e-03', \
+1e20 w points ls 28 ps 2 title '2,1e-03', \
+1e20 w points ls 29 ps 2 title '3,1e-03', \
+1e20 w points ls 30 ps 2 title '1,1e-04', \
+1e20 w points ls 31 ps 2 title '2,1e-04', \
+1e20 w points ls 32 ps 2 title '3,1e-04'
 
 unset output

@@ -43,6 +43,8 @@ def main(argv):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
+        X_val = None
+        y_val = None
 
     data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
         model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)

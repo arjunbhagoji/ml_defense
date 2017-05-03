@@ -39,10 +39,18 @@ def model_dict_create():
                         help='Specify defense mechanism')
     parser.add_argument('-dr', '--dim_red', default='pca', type=str,
                         help='Specify dimension reduction scheme')
+    parser.add_argument('--rev', action='store_true',
+            help='Train SVM and attack on DR sample reverted to original space')
     parser.add_argument('-r', '--reg', default=None, type=str,
                         help='Specify type of regularization to use')
     parser.add_argument('-b', '--batchsize', default=500, type=int,
                         help='Specify batchsize to use')
+    parser.add_argument('-pp','--preprocess', default=None, type=str,
+        help='Specify preprocessing on dataset (std, whiten, antiwhiten(*)) \
+             (default: None) \n (*) is degree of covariance (>= -1)')
+    parser.add_argument('-nl', '--nonlin', default='sigmoid', type=str,
+                        help='Specify activaton function to use')
+
     args = parser.parse_args()
 
     model_dict = {}
@@ -57,6 +65,12 @@ def model_dict_create():
     model_dict.update({'dim_red': args.dim_red})
     model_dict.update({'reg': args.reg})
     model_dict.update({'batchsize': args.batchsize})
+    model_dict.update({'preprocess': args.preprocess})
+    model_dict.update({'nonlin': args.nonlin})
+    if args.rev:
+        model_dict.update({'rev': 1})
+    else:
+        model_dict.update({'rev': None})
 
     # Determine output size
     dataset = model_dict['dataset']
@@ -72,24 +86,29 @@ def model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_model_name(model_dict, rd=None, rev=None):
+def get_model_name(model_dict, rd=None):
     """Resolve a model's name to save/load based on model_dict"""
 
     model_name = model_dict['model_name']
     depth = model_dict['depth']
     width = model_dict['width']
     DR = model_dict['dim_red']
+    rev = model_dict['rev']
 
     if model_name == 'mlp' or model_name == 'custom':
         m_name = 'nn_FC_{}_{}'.format(depth, width)
+        if model_dict['nonlin'] != 'sigmoid':
+            m_name += '{}'.format(model_dict['nonlin'])
     elif model_name == 'cnn':
         m_name = 'cnn_{}_{}'.format(depth, width)
+        if model_dict['nonlin'] != 'relu':
+            m_name += '{}'.format(model_dict['nonlin'])
 
     reg = model_dict['reg']
     if rd is not None:
         m_name += '_{}_{}'.format(rd, DR)
-    if rev is not None:
-        m_name += '_rev'
+        if rev is not None:
+            m_name += '_rev'
     if reg is not None:
         m_name += '_reg_{}'.format(reg)
     if model_name == 'custom':
@@ -375,7 +394,7 @@ def reshape_data(X, data_dict, rd=None, rev=None):
 
 
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
-                dr_alg=None, rev=None):
+                dr_alg=None):
     """Save <no_of_img> samples as image files in visual_data folder"""
 
     from lib.utils.dr_utils import invert_dr
@@ -387,6 +406,7 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     atk = model_dict['attack']
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
+    rev = model_dict['rev_flag']
     abs_path_v = resolve_path_v(model_dict)
 
     if (rd is not None) and (rev is None):
@@ -452,24 +472,18 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
 #------------------------------------------------------------------------------#
 
 
-def utility_write(model_dict, test_acc, test_conf, rd, rev):
+def utility_write(model_dict, test_acc, test_conf, rd):
     """
     Write utility (accuracy and confidence on test set) of the model on a file.
     The output file is saved in output_data folder.
     """
-    # model_name = model_dict['model_name']
-    # if model_name in ('mlp', 'custom'):
-    #     depth = model_dict['depth']
-    #     width = model_dict['width']
-    #     fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
-    # elif model_name == 'cnn':
-    #     fname = 'Utility_cnn_papernot.txt'
 
     fname = get_model_name(model_dict)
     fname = 'Utility_' + fname + '.txt'
     abs_path_o = resolve_path_o(model_dict)
     ofile = open(abs_path_o + fname, 'a')
     DR = model_dict['dim_red']
+    rev = model_dict['rev']
     if rd is None:
         ofile.write('No_' + DR + ':\t')
     else:
@@ -482,7 +496,7 @@ def utility_write(model_dict, test_acc, test_conf, rd, rev):
 #------------------------------------------------------------------------------#
 
 
-def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
+def file_create(model_dict, is_defense, rd, strat_flag=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type, strat, and rev
@@ -493,6 +507,8 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 
     fname = model_dict['attack']
     fname += '_' + get_model_name(model_dict)
+    reg = model_dict['reg']
+    rev = model_dict['rev']
 
     if strat_flag is not None:
         fname += '_strat'
@@ -510,12 +526,12 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 
 
 def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
-                 rev=None, strat_flag=None):
+                 strat_flag=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
 
-    plotfile = file_create(model_dict, is_defense, rd, rev, strat_flag)
+    plotfile = file_create(model_dict, is_defense, rd, strat_flag)
     plotfile.write('\\\small{' + str(rd) + '}\n')
     # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
     for i in range(len(dev_list)):

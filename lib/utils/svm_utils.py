@@ -9,7 +9,11 @@ from sklearn.externals import joblib
 from matplotlib import image as img
 
 from lib.utils.dr_utils import invert_dr
+from lib.utils.dr_utils import gradient_transform
 from lib.attacks.svm_attacks import min_dist_calc
+
+def resolve_path():
+    return dirname(dirname(dirname(os.path.abspath(__file__))))
 
 #------------------------------------------------------------------------------#
 
@@ -30,7 +34,7 @@ def resolve_path_m(model_dict):
 
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_m = 'svm_models/' + dataset
     if dataset == 'GTSRB':
         rel_path_m += str(channels)
@@ -57,7 +61,7 @@ def resolve_path_o(model_dict):
 
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_o = 'svm_output_data/' + dataset
     if dataset == 'GTSRB':
         rel_path_o += str(channels)
@@ -85,7 +89,7 @@ def resolve_path_v(model_dict):
     model_name = get_svm_model_name(model_dict)
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_v = 'svm_visual_data/' + dataset + '/' + model_name
     if dataset == 'GTSRB':
         rel_path_v += str(channels)
@@ -262,36 +266,10 @@ def model_transform(model_dict, clf, dr_alg):
     matrix to transform input data in original space
     """
 
-    DR = model_dict['dim_red']
-
-    # A is transformation matrix of dr_alg
-    if DR == 'pca':
-        A = dr_alg.components_
-    elif DR == 'pca-whiten':
-        # This S is S / sqrt(n_samples)
-        # Entries in S with very small value ~0 (last few elements) could cause
-        # stability problem when inverted
-        S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
-        V = dr_alg.components_.T
-        # A = (V / S).T
-        A = np.dot(V, np.diag(S_inv)).T
-    elif 'antiwhiten' in DR:
-        deg = int(DR.split('antiwhiten', 1)[1])
-        S = dr_alg.S_
-        if deg == -1:
-            A = np.diag(1 / S)
-        elif deg == 0:
-            A = np.eye(dr_alg.n_components)
-        elif deg >= 1:
-            A = np.eye(dr_alg.n_components)
-            for i in range(deg):
-                A = np.dot(A, np.diag(S))
-        A = np.dot(dr_alg.V_, A).T
-    else:
-        raise ValueError('Cannot get transformation matrix from this \
-                          dimensionality reduction')
+    A = gradient_transform(model_dict, dr_alg)
 
     clf.coef_ = np.dot(clf.coef_, A)
+
     return clf
 #------------------------------------------------------------------------------#
 
@@ -333,7 +311,7 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     else:
         ofile.write( str(rd) + ' ')
     # Format: <dimensions> <accuracy> <avg. dist.>
-    ofile.write('{:.2f} {:.3f}'.format(float(n_correct) / test_len * 100,
+    ofile.write('{:.2f} {:.3f} \n'.format(clf.score(X_test,y_test),
                                        sum_dist / n_correct))
     ofile.write('\n\n')
 #------------------------------------------------------------------------------#

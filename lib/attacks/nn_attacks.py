@@ -10,9 +10,10 @@ import scipy
 from ..utils.theano_utils import *
 from ..utils.attack_utils import *
 from ..utils.data_utils import *
+from ..utils.dr_utils import gradient_transform
 
 #------------------------------------------------------------------------------#
-def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red, rd, rev):
+def fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, rd):
 
     """
     Performs Fast Sign Gradient attack and put perturbed examples in <adv_x>.
@@ -42,7 +43,8 @@ def fgs(x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red, rd, rev)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red, rd, rev):
+def fg(model_dict, data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
+       dr_alg, rd):
 
     """
     Performs Fast Gradient attack and put perturbed examples in <adv_x>.
@@ -64,34 +66,44 @@ def fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red
     no_of_features = data_dict['no_of_features']
     channels = data_dict['channels']
     no_of_dim = data_dict['no_of_dim']
+    rev = model_dict['rev']
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
-    if rd != None and rev != None:
-        if dim_red == 'pca':
-            U_k = dr_alg.components_
-            delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), U_k.T)
-            delta_x = np.dot(delta_x, U_k)
+
+    if dr_alg is not None:
+        A = gradient_transform(model_dict, dr_alg)
+        delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), A)
+
+    # if rd != None and rev != None:
+    #     if dim_red == 'pca':
+    #         U_k = dr_alg.components_
+    #         delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), U_k.T)
+    #         delta_x = np.dot(delta_x, U_k)
     # Calulating norm of gradient
     if no_of_dim == 2:
         delta_x_norm = np.linalg.norm(delta_x, axis=1)
     elif no_of_dim == 3:
-        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                      features_per_c), axis=2)
+        if dr_alg is not None:
+            curr_dim = delta_x.shape[1]
+            delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+                                          curr_dim), axis=2)
+            delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
+        else:
+            delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+                                          features_per_c), axis=2)
         delta_x = delta_x.reshape(batch_len, channels, features_per_c)
     elif no_of_dim == 4:
-        delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+        if dr_alg is not None:
+            curr_dim = delta_x.shape[1]
+            delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
+                                          curr_dim), axis=2)
+            delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
+        else:
+            delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
                                       features_per_c), axis=2)
         height = data_dict['height']
         width = data_dict['width']
         delta_x = delta_x.reshape(batch_len, channels, height, width)
-    # if no_of_dim == 2:
-    # if rd == None or rev != None:
-    #     n_features = x_curr.shape[2]*x_curr.shape[3]
-    #     delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-    #                                   n_features), axis=2)
-    # elif rd != None and rev == None:
-    #     delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels, rd),
-    #                                   axis=2)
 
     # Perturbed images
     for i in range(batch_len):
@@ -110,7 +122,7 @@ def fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, dim_red
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
-                   dev_list, X_test, y_test, dr_alg=None, rd=None, rev=None):
+                   dev_list, X_test, y_test, dr_alg=None, rd=None):
 
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
@@ -165,11 +177,11 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
             if model_dict['attack'] == 'fgs':
-                fgs(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
-                    dr_alg, dim_red, rd, rev)
+                fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
+                    dr_alg, rd)
             elif model_dict['attack'] == 'fg':
-                fg(data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
-                   dr_alg, dim_red, rd, rev)
+                fg(model_dict, data_dict, x_curr, y_curr, adv_x, dev_mag, b_c,
+                   gradient, dr_alg, rd)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
