@@ -1,0 +1,60 @@
+sys	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^import sys$/;"	namespace	line:7
+os	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^import os$/;"	namespace	line:8
+argparse	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^import argparse$/;"	namespace	line:9
+np	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^import numpy as np$/;"	namespace	line:10
+pickle	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^import pickle$/;"	namespace	line:11
+plt	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^from matplotlib import pyplot as plt$/;"	namespace	line:13
+img	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^from matplotlib import image as img$/;"	namespace	line:14
+dirname	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^from os.path import dirname$/;"	namespace	line:16
+StandardScaler	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^from sklearn.preprocessing import StandardScaler$/;"	namespace	line:17
+AntiWhiten	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^from lib.utils.AntiWhiten import AntiWhiten$/;"	namespace	line:19
+model_dict_create	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def model_dict_create():$/;"	function	line:24
+get_model_name	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def get_model_name(model_dict, rd=None):$/;"	function	line:89
+load_dataset_MNIST	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def load_dataset_MNIST(model_dict):$/;"	function	line:121
+urlretrieve	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^        from urllib import urlretrieve$/;"	namespace	line:129
+urlretrieve	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^        from urllib.request import urlretrieve$/;"	namespace	line:131
+download	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    def download(filename, abs_path_i,$/;"	function	line:133	function:load_dataset_MNIST
+gzip	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    import gzip$/;"	namespace	line:140
+load_mnist_images	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    def load_mnist_images(abs_path_i, filename):$/;"	function	line:142	function:load_dataset_MNIST
+load_mnist_labels	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    def load_mnist_labels(abs_path_i, filename):$/;"	function	line:156	function:load_dataset_MNIST
+load_dataset_GTSRB	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def load_dataset_GTSRB(model_dict):$/;"	function	line:182
+load_pickled_data	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    def load_pickled_data(file, columns):$/;"	function	line:188	function:load_dataset_GTSRB
+preprocess	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    def preprocess(X, channels):$/;"	function	line:208	function:load_dataset_GTSRB
+load_dataset_HAR	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def load_dataset_HAR(model_dict):$/;"	function	line:245
+preprocess	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def preprocess(model_dict, data):$/;"	function	line:258
+load_dataset	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def load_dataset(model_dict):$/;"	function	line:299
+get_data_shape	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def get_data_shape(X_train, X_test, X_val=None):$/;"	function	line:317
+reshape_data	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def reshape_data(X, data_dict, rd=None, rev=None):$/;"	function	line:363
+save_images	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,$/;"	function	line:396
+invert_dr	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^    from lib.utils.dr_utils import invert_dr$/;"	namespace	line:400
+utility_write	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def utility_write(model_dict, test_acc, test_conf, rd):$/;"	function	line:475
+file_create	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def file_create(model_dict, is_defense, rd, strat_flag=None):$/;"	function	line:499
+print_output	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,$/;"	function	line:528
+resolve_path_i	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def resolve_path_i(model_dict):$/;"	function	line:546
+resolve_path_m	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def resolve_path_m(model_dict):$/;"	function	line:568
+resolve_path_o	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def resolve_path_o(model_dict):$/;"	function	line:594
+resolve_path_v	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/utils/data_utils.py	/^def resolve_path_v(model_dict):$/;"	function	line:620
+os	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import os$/;"	namespace	line:1
+np	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import numpy as np$/;"	namespace	line:2
+theano	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import theano$/;"	namespace	line:3
+theano	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import theano.tensor as T$/;"	namespace	line:4
+T	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import theano.tensor as T$/;"	namespace	line:4
+dirname	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^from os.path import dirname$/;"	namespace	line:5
+multiprocessing	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^import multiprocessing$/;"	namespace	line:6
+plt	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^from matplotlib import pyplot as plt$/;"	namespace	line:8
+partial	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^from functools import partial$/;"	namespace	line:9
+strategic_attack	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,$/;"	function	line:16
+main	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/strategic_attack_demo.py	/^def main():$/;"	function	line:50
+os	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import os$/;"	namespace	line:1
+dirname	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^from os.path import dirname$/;"	namespace	line:3
+np	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import numpy as np$/;"	namespace	line:5
+theano	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import theano$/;"	namespace	line:6
+theano	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import theano.tensor as T$/;"	namespace	line:7
+T	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import theano.tensor as T$/;"	namespace	line:7
+scipy	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^import scipy$/;"	namespace	line:8
+gradient_transform	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^from ..utils.dr_utils import gradient_transform$/;"	namespace	line:13
+fgs	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^def fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, rd):$/;"	function	line:16
+fg	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,$/;"	function	line:50
+attack_wrapper	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,$/;"	function	line:143
+l_bfgs_attack	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^def l_bfgs_attack(input_var, target_var, test_prediction, X_test, y_test,$/;"	function	line:227
+f	/Users/arjunbhagoji/Dropbox/Research/ResearchProjects/Princeton_Prateek/ML+Security/ml_defense/lib/attacks/nn_attacks.py	/^        def f(x):$/;"	function	line:251	function:l_bfgs_attack

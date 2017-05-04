@@ -78,9 +78,9 @@ set xrange [0:2.5]
 set yrange [0:100]
 # set margins 3, 1, 2, 2
 set key right bottom
-set title 'Strategic FG Attack on NN'
+set title 'Strategic FG Attack on NN with pca'
 
-plot for [IDX=0:6] 'output_data/MNIST/fg_nn_2_100_strat_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
 unset output
 
@@ -92,7 +92,7 @@ set xrange [0:2.5]
 set yrange [0:100]
 # set margins 3, 1, 2, 2
 set key right bottom
-set title 'Strategic FG Attack on NN'
+set title 'Strategic FG Attack on NN with pca_rev'
 
 plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_rev_pca.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
@@ -235,7 +235,7 @@ plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_antiwhiten1_retrain.txt' i 
 
 unset output
 
-set output "plots/fg_mnist_nn_FC_2_100_antiwhiten1_strat_rev.png"
+set output "plots/fg_mnist_nn_FC_2_100_antiwhiten2_strat.png"
 
 set xlabel 'r$\eta$'
 set ylabel '\small{Adversarial success (\%)}' offset 2
@@ -243,9 +243,9 @@ set xrange [0:2.5]
 set yrange [0:100]
 # set margins 3, 1, 2, 2
 set key right bottom
-set title 'Strategic FG Attack on FC_2_100 with antiwhiten1'
+set title 'Strategic FG Attack on FC_2_100 with antiwhiten2'
 
-plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_rev_antiwhiten1.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
+plot for [IDX=0:6] 'output_data/MNIST/fg_nn_FC_2_100_strat_antiwhiten2.txt' i (2*IDX) u 1:6 with lines ls (IDX+1) title columnheader(1)
 
 unset output
 

@@ -33,6 +33,10 @@ def fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, rd):
     batch_len = x_curr.shape[0]
     # Gradient w.r.t to input and current class
     delta_x = gradient(x_curr, y_curr)
+    if dr_alg is not None:
+        A = gradient_transform(model_dict, dr_alg)
+        delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), A)
+
     # Sign of gradient
     delta_x_sign = np.sign(delta_x)
     if rd == None or rev != None: # Clipping if in pixel space
@@ -43,8 +47,8 @@ def fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient, dr_alg, rd):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def fg(model_dict, data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
-       dr_alg, rd):
+def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
+       gradient, dr_alg, rd, mean):
 
     """
     Performs Fast Gradient attack and put perturbed examples in <adv_x>.
@@ -74,55 +78,70 @@ def fg(model_dict, data_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
         A = gradient_transform(model_dict, dr_alg)
         delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), A)
 
-    # if rd != None and rev != None:
-    #     if dim_red == 'pca':
-    #         U_k = dr_alg.components_
-    #         delta_x = np.dot(delta_x.reshape(batch_len, no_of_features), U_k.T)
-    #         delta_x = np.dot(delta_x, U_k)
     # Calulating norm of gradient
     if no_of_dim == 2:
         delta_x_norm = np.linalg.norm(delta_x, axis=1)
+        for i in range(batch_len):
+            if delta_x_norm[i] == 0.0:
+                x_adv_curr = x_curr_orig[i]
+            else:
+                x_adv_curr = np.clip(x_curr_orig[i] + dev_mag
+                                    * (delta_x[i]/delta_x_norm[i]) + mean, 0, 1)
+                x_adv_curr -= mean
+                if dr_alg is not None:
+                    adv_x[b_c*batch_len + i] = np.dot(x_adv_curr, A.T)
+                else: adv_x[b_c*batch_len + i] = x_adv_curr
     elif no_of_dim == 3:
         if dr_alg is not None:
             curr_dim = delta_x.shape[1]
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
                                           curr_dim), axis=2)
-            delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
+            x_curr_orig = x_curr_orig.reshape(batch_len, channels, curr_dim)
+            delta_x = delta_x.reshape(batch_len, channels, curr_dim)
         else:
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
                                           features_per_c), axis=2)
-        delta_x = delta_x.reshape(batch_len, channels, features_per_c)
+        mean = mean.reshape(channels, curr_dim)
+        for i in range(batch_len):
+            for j in range(channels):
+                if delta_x_norm[i, j] == 0.0:
+                    x_adv_curr = x_curr_orig[i, j]
+                else:
+                    x_adv_curr = np.clip(x_curr_orig[i,j] + dev_mag
+                                    *(delta_x[i, j]/delta_x_norm[i, j]) + mean[j], 0, 1)
+                    x_adv_curr -= mean[j]
+                    if dr_alg is not None:
+                        x_adv_curr = np.dot(x_adv_curr.reshape(1, curr_dim), A.T)
+                adv_x[b_c*batch_len + i, j] = x_adv_curr.reshape(1, channels, features_per_c)
     elif no_of_dim == 4:
+        height = data_dict['height']
+        width = data_dict['width']
         if dr_alg is not None:
             curr_dim = delta_x.shape[1]
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
                                           curr_dim), axis=2)
-            delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
+            delta_x = delta_x.reshape(batch_len, channels, height, width)
+            # delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
         else:
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                      features_per_c), axis=2)
-        height = data_dict['height']
-        width = data_dict['width']
-        delta_x = delta_x.reshape(batch_len, channels, height, width)
-
-    # Perturbed images
-    for i in range(batch_len):
-        for j in range(channels):
-            if delta_x_norm[i, j] == 0.0:
-                adv_x[b_c*batch_len + i, j] = x_curr[i, j]
-            else:
-                if rd == None or rev != None: # Clipping in pixel space
-                    adv_x[b_c*batch_len + i, j] = np.clip(x_curr[i, j] + dev_mag
-                                    *(delta_x[i, j]/delta_x_norm[i, j]), 0, 1)
-                elif rd != None and rev == None:
-                    adv_x[b_c*batch_len + i, j] = (x_curr[i, j]
-                                   + dev_mag*(delta_x[i, j]/delta_x_norm[i, j]))
+                                          features_per_c), axis=2)
+        for i in range(batch_len):
+            for j in range(channels):
+                if delta_x_norm[i, j] == 0.0:
+                    x_adv_curr = x_curr_orig[i, j]
+                else:
+                    x_adv_curr = np.clip(x_curr_orig[i,j] + dev_mag
+                                    *(delta_x[i, j]/delta_x_norm[i, j]) + mean[j], 0, 1)
+                    x_adv_curr -= mean[j]
+                    if dr_alg is not None:
+                        x_adv_curr = np.dot(x_adv_curr.reshape(1, curr_dim), A.T)
+                adv_x[b_c*batch_len + i, j] = x_adv_curr.reshape(1, channels, height, width)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
 # Function to create adv. examples using the FSG method
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
-                   dev_list, X_test, y_test, dr_alg=None, rd=None):
+                   dev_list, X_test, y_test, mean, dr_alg=None, rd=None):
 
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
@@ -145,6 +164,7 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     channels = data_dict['channels']
     no_of_features = data_dict['no_of_features']
     dim_red = model_dict['dim_red']
+    dataset = model_dict['dataset']
 
     n_mags = len(dev_list)
     # Creating array to store adversarial samples
@@ -167,6 +187,13 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         width = data_dict['width']
         adv_x = np.zeros((adv_len, channels, height, width))
 
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+        _, _, _, _, X_test_orig, _ = load_dataset(model_dict)
+    elif dataset == 'HAR':
+        _, _, X_test_orig, _ = load_dataset(model_dict)
+
+    X_test_orig -= mean
+
     o_list = []
     mag_count = 0
     for dev_mag in dev_list:
@@ -176,12 +203,13 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         b_c = 0
         for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
+            x_curr_orig = X_test_orig[b_c*batch_len:(b_c+1)*batch_len]
             if model_dict['attack'] == 'fgs':
-                fgs(model_dict, x_curr, y_curr, adv_x, dev_mag, b_c, gradient,
-                    dr_alg, rd)
+                fgs(model_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag,
+                    b_c, gradient, dr_alg, rd)
             elif model_dict['attack'] == 'fg':
-                fg(model_dict, data_dict, x_curr, y_curr, adv_x, dev_mag, b_c,
-                   gradient, dr_alg, rd)
+                fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x,
+                   dev_mag, b_c, gradient, dr_alg, rd, mean)
             b_c += 1
         # Accuracy vs. true labels. Confidence on mismatched predictions
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,

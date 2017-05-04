@@ -14,7 +14,7 @@ from lib.attacks.nn_attacks import *
 
 #-----------------------------------------------------------------------------#
 def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
-                     X_val=None, y_val=None):
+                     mean, X_val=None, y_val=None):
 
     """
     Helper function called by main() to setup NN model, attack it, print results
@@ -33,8 +33,8 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
     # print ("Starting attack...")
     adv_x_all, output_list = attack_wrapper(model_dict, data_dict, input_var,
                                             target_var, test_prediction,
-                                            dev_list, X_test, y_test, dr_alg, rd
-                                            )
+                                            dev_list, X_test, y_test, mean,
+                                            dr_alg, rd)
     #
     # # Printing result to file
     print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
@@ -73,15 +73,20 @@ def main():
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
 
-    # data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
-    #     model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)
-    #
-    # # Running attack and saving samples
-    # print('Creating adversarial samples...')
-    # adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
-    #                                     target_var, test_prediction, dev_list,
-    #                                     X_test, y_test)
-    # print_output(model_dict, output_list, dev_list)
+    mean = np.mean(X_train,axis=0)
+    X_train -= mean
+    X_test -= mean
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'): X_val -= mean
+
+    data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
+        model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)
+
+    # Running attack and saving samples
+    print('Creating adversarial samples...')
+    adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
+                                        target_var, test_prediction, dev_list,
+                                        X_test, y_test, mean)
+    print_output(model_dict, output_list, dev_list)
     # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # partial_strategic_attack=partial(strategic_attack,X_train=X_train,
@@ -90,7 +95,7 @@ def main():
     for rd in rd_list:
         # partial_strategic_attack(rd)
         strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test,
-                         y_test, X_val, y_val)
+                         y_test, mean, X_val, y_val)
 
     # partial_strategic_attack(784)
     # pool=multiprocessing.Pool(processes=8)

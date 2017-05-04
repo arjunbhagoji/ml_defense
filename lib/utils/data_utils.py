@@ -512,7 +512,7 @@ def file_create(model_dict, is_defense, rd, strat_flag=None):
 
     if strat_flag is not None:
         fname += '_strat'
-    if rev is not None:
+    if (rev is not None and rd is not None):
         fname += '_rev'
     if rd is not None:
         fname += '_' + model_dict['dim_red']
@@ -530,7 +530,6 @@ def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
     """
     Creates an output file reporting accuracy and confidence of attack
     """
-
     plotfile = file_create(model_dict, is_defense, rd, strat_flag)
     plotfile.write('\\\small{' + str(rd) + '}\n')
     # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
