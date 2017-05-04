@@ -180,11 +180,10 @@ def get_model_name(model_dict, rd=None, rev=None):
     Helper function to get model name from <model_dict>, <rd> and <rev>
     """
 
-    model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(
-        model_dict['svm_type'],
-        model_dict['classes'],
-        model_dict['penalty'],
-        model_dict['penconst'])
+    model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(model_dict['svm_type'],
+                                                  model_dict['classes'],
+                                                  model_dict['penalty'],
+                                                  model_dict['penconst'])
 
     if model_dict['preprocess'] is not None:
         model_name += ('_' + model_dict['preprocess'])
@@ -256,33 +255,52 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_transform(model_dict, clf, dr_alg, M):
+def model_transform(model_dict, clf, dr_alg=None, M=None):
     """
     Modify SVM's decision function to take into account transformation matrix to
-    transform input data in original space. Assume SVM's weights are in row notation
-    or shape : [n_classes, n_components]
+    transform input data in original space. Assume SVM's weights are in row
+    notation or shape : [n_classes, n_components]
+
+    Parameters
+    ----------
+    model_dict : dictionary containing model param
+    clf        : sklearn SVM classifier object
+    dr_alg     : dim. red. object used on data
+    M          : transformation matrix used in preprocessing (optional)
+
+    Returns
+    -------
+    clf        : same SVM object with weights (coef_) modified
     """
 
     DR = model_dict['dim_red']
 
-    # A is transformation matrix of dr_alg
-    if DR == 'pca':
-        A = dr_alg.components_
-    elif DR == 'pca-whiten':
-        # This S is S / sqrt(n_samples)
-        # Entries in S with very small value ~0 (last few elements) could cause
-        # stability problem when inverted
-        S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
-        V = dr_alg.components_.T
-        # A = (V / S).T
-        A = np.dot(V, np.diag(S_inv)).T
-    elif 'antiwhiten' in DR:
-        A = dr_alg.transform_matrix_.T
+    if dr_alg is not None:
+        # A is transformation matrix of dr_alg
+        if DR == 'pca':
+            A = dr_alg.components_
+        elif DR == 'pca-whiten':
+            # This S is S / sqrt(n_samples)
+            # Entries in S with very small value ~0 (last few elements) could cause
+            # stability problem when inverted
+            S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
+            V = dr_alg.components_.T
+            # A = (V / S).T
+            A = np.dot(V, np.diag(S_inv)).T
+        elif 'antiwhiten' in DR:
+            A = dr_alg.transform_matrix_.T
+        elif DR == 'dca':
+            A = dr_alg.components
+        else:
+            raise ValueError('Cannot get transformation matrix from this \
+                              dimensionality reduction')
+        if M is not None:
+            A = np.dot(A, M.T)
+    elif M is not None:
+        A = M.T
     else:
-        raise ValueError('Cannot get transformation matrix from this \
-                          dimensionality reduction')
-    if M is not None:
-        A = np.dot(A, M.T)
+        return clf
+
     clf.coef_ = np.dot(clf.coef_, A)
     return clf
 #------------------------------------------------------------------------------#
@@ -316,14 +334,14 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     # Resolve path to utility output file
     abs_path_o = resolve_path_o(model_dict)
     fname = 'utility_' + get_model_name(model_dict)
+    if rd != None: fname += '_' + DR
+    if rev != None: fname += '_rev'
     ofile = open(abs_path_o + fname + '.txt', 'a')
-    if rd is None:
-        ofile.write('No_' + DR + ':\t')
+    DR = model_dict['dim_red']
+    if rd == None:
+        ofile.write('No_'+ DR + ' ')
     else:
-        if rev is None:
-            ofile.write(DR + '_{}:\t'.format(rd))
-        else:
-            ofile.write(DR + '_rev_{}:\t'.format(rd))
+        ofile.write(str(rd) + ' ')
     # Format: <dimensions> <accuracy> <avg. dist.>
     ofile.write('{:.2f} {:.3f}'.format(float(n_correct) / test_len * 100,
                                        sum_dist / n_correct))
@@ -405,50 +423,41 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
     no_of_img = 1    # Number of images to save
     indices = range(no_of_img)
     X_curr = X_test[indices]
+
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
+    channels = model_dict['channels']
     abs_path_v = resolve_path_v(model_dict)
+
     no_of_features = data_dict['no_of_features']
-    height = int(np.sqrt(no_of_features))
-    width = height
+    height = data_dict['height']
+    width = data_dict['width']
 
     # TODO: invert preprocessing
     # if model_dict['preprocess'] is not None:
 
-    channels = 1
-    if channels == 1:
-        if (rd is not None) and (rev is None):
-            # Invert dr samples to their original space
-            adv_x_curr = adv_x[indices, :] + dr_alg.mean_
-            for i in indices:
-                adv = adv_x_curr[i].reshape((height, width))
-                orig = X_curr[i].reshape((height, width))
-                img.imsave(
-                    abs_path_v +
-                    '{}_{}_{}_mag{}.png'.format(i, DR, rd, dev_mag),
-                    adv * 255,
-                    vmin=0,
-                    vmax=255,
-                    cmap='gray')
-                img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
-                           orig * 255, vmin=0, vmax=255, cmap='gray')
+    adv_x_curr = adv_x[indices, :]
+    for i in indices:
+        if channels == 1:
+            adv = adv_x_curr[i].reshape((height, width))
+            orig = X_curr[i].reshape((height, width))
+            cmap = 'gray'
+        else:
+            adv = adv_x_curr[i].reshape((height, width, channels))
+            orig = X_curr[i].reshape((height, width, channels))
+            cmap = None
 
-        elif (rd is None) or (rev is not None):
-            adv_x_curr = adv_x[indices, :]
-            for i in indices:
-                adv = adv_x_curr[i].reshape((height, width))
-                orig = X_curr[i].reshape((height, width))
-                if rd is not None:
-                    fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
-                elif rd is None:
-                    fname = abs_path_v + '{}'.format(i)
-                img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
-                           vmin=0, vmax=255, cmap='gray')
-                img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255,
-                           cmap='gray')
-    else:
-        adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
-        orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
+        fname = abs_path_v
+        if (rd is not None) and (rev is None):
+            fname += '{}_{}_{}'.format(i, DR, rd)
+        elif rd is not None:
+            fname += '{}_{}_rev_{}'.format(i, DR, rd)
+        elif rd is None:
+            fname += '{}'.format(i)
+
+        img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255, vmin=0,
+                   vmax=255, cmap=cmap)
+        img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255, cmap=cmap)
 #------------------------------------------------------------------------------#
 
 

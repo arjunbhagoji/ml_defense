@@ -252,9 +252,9 @@ def preprocess(model_dict, X_train, X_val, X_test):
         # identity matrix
         pp = AntiWhiten(n_components=n_features, deg=-1)
     elif 'antiwhiten' in preprocess:
-        deg = int(preprocess.split('antiwhiten', 1)[1])
         # Preprocess data by projecting to basis that covariance of data is
-        # exponentiated to a certain degree (1)
+        # exponentiated to a certain degree <deg>
+        deg = int(preprocess.split('antiwhiten', 1)[1])
         pp = AntiWhiten(n_components=n_features, deg=deg)
     else:
         raise ValueError('Unrecognized preprocessing method')
@@ -267,7 +267,7 @@ def preprocess(model_dict, X_train, X_val, X_test):
 
     # Retrieve transformation matrix
     if preprocess == 'std':
-        A = np.diag(pp.scale_)
+        A = np.diag(1 / pp.scale_)
     elif preprocess == 'whiten':
         A = pp.transform_matrix_
     elif preprocess == 'antiwhiten':
