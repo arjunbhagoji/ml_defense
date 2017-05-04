@@ -14,7 +14,7 @@ from lib.utils.dr_utils import *
 
 #------------------------------------------------------------------------------#
 def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
-                  rev=None):
+                  layer=None):
 
     """
     Create a Lasagne model/network as specified in <model_dict> and check
@@ -52,9 +52,9 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
         depth = 9
         width = 'papernot'
         rate = 0.01
-        activation = 'relu'
+        activation = model_dict['nonlin']
         model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'activation':activation})
+                           'width':width})
         network = build_cnn(in_shape, n_out, input_var)
 
     #------------------------------- MLP model --------------------------------#
@@ -64,10 +64,14 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
         depth = 2
         width = 100
         rate = 0.01
-        activation = 'sigmoid'
+        activation = model_dict['nonlin']
         model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'activation':activation})
-        network, _, _ = build_hidden_fc(in_shape, n_out, input_var, activation,
+                           'width':width})
+        if layer is not None:
+            network, layers = build_hidden_fc(in_shape, n_out,
+                                                        input_var, activation,
+                                                        width)
+        network, _= build_hidden_fc(in_shape, n_out, input_var, activation,
                                         width)
 
     #------------------------------ Custom model ------------------------------#
@@ -79,99 +83,71 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
         drop_in = 0.2
         drop_hidden = 0.5
         rate = 0.01
-        activation = 'sigmoid'
+        activation = model_dict['nonlin']
         model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'activation':activation,
-                           'drop_in':drop_in, 'drop_hidden':drop_hidden})
+                           'width':width, 'drop_in':drop_in,
+                           'drop_hidden':drop_hidden})
         network = build_custom_mlp(in_shape, n_out, input_var, activation,
                                    int(depth), int(width), float(drop_in),
                                    float(drop_hidden))
 
     abs_path_m = resolve_path_m(model_dict)
-    model_path = abs_path_m + get_model_name(model_dict, rd, rev)
+    model_path = abs_path_m + get_model_name(model_dict, rd)
     model_exist_flag = 0
     if os.path.exists(model_path + '.npz'): model_exist_flag = 1
 
-    return network, model_exist_flag
+    if layer is not None:
+        return network, model_exist_flag, layers
+    else:
+        return network, model_exist_flag
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None, DR=None, rev=None):
+def model_loader(model_dict, rd=None):
 
     """
     Load parameters of the saved Lasagne model
     """
 
-    model_name = model_dict['model_name']
+    mname = get_model_name(model_dict, rd)
     abs_path_m = resolve_path_m(model_dict)
 
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
-    elif model_name == 'mlp':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    model_path = abs_path_m + mname
 
-    reg = model_dict['reg']
-
-    if rd != None: model_path += '_{}_{}'.format(rd, DR)
-    if rev != None: model_path += '_rev'
-    if reg != None: model_path += '_reg_{}'.format(reg)
-    if model_name == 'custom': model_path += '_drop'
     with np.load(model_path + '.npz') as f:
         param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
     return param_values
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_saver(network, model_dict, rd=None, rev=None):
+def model_saver(network, model_dict, rd=None):
 
     """
     Save model parameters in model foler as .npz file compatible with Lasagne
     """
 
-    model_name = model_dict['model_name']
+    mname = get_model_name(model_dict, rd)
     abs_path_m = resolve_path_m(model_dict)
-    DR = model_dict['dim_red']
 
-    if model_name == 'cnn':
-        model_path = abs_path_m + 'model_cnn_{}_{}_papernot'.format(depth, width)
-    elif model_name == 'mlp':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
-    elif model_name == 'custom':
-        depth = model_dict['depth']
-        width = model_dict['width']
-        model_path = abs_path_m + 'model_FC_{}_{}'.format(depth, width)
+    model_path = abs_path_m + mname
 
-    reg = model_dict['reg']
-
-    if rd != None: model_path += '_{}_{}'.format(rd, DR)
-    if rev != None: model_path += '_rev'
-    if reg != None: model_path += '_reg_{}'.format(reg)
-    if model_name == 'custom': model_path += '_drop'
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
-                y_val=None, rd=None, rev=None):
+def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val,
+                y_val, rd=None, layer=None):
 
     """
     Main function to set up network (create, load, test, save)
     """
-
+    rev = model_dict['rev']
     dim_red = model_dict['dim_red']
     if rd != None:
         # Doing dimensionality reduction on dataset
         print("Doing {} with rd={} over the training data".format(dim_red, rd))
-        X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red,
-                                                    rd, X_val, rev)
+        X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
+                                                    y_train, rev, X_val)
     else: dr_alg = None
 
     # Getting data parameters after dimensionality reduction
@@ -185,8 +161,13 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
     target_var = T.ivector('targets')
 
     # Check if model already exists
-    network, model_exist_flag = model_creator(model_dict, data_dict, input_var,
-                                              target_var, rd, rev)
+    if layer is not None:
+        network, model_exist_flag, layers = model_creator(model_dict, data_dict, input_var,
+                                                  target_var, rd, layer)
+    else:
+        network, model_exist_flag = model_creator(model_dict, data_dict,
+                                                  input_var, target_var, rd,
+                                                  layer)
 
     #Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -198,19 +179,24 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val=None,
     # Building or loading model depending on existence
     if model_exist_flag == 1:
         # Load the correct model:
-        param_values = model_loader(model_dict, rd, dim_red, rev)
+        param_values = model_loader(model_dict, rd)
         lasagne.layers.set_all_param_values(network, param_values)
     elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
-        model_trainer(input_var, target_var, prediction, test_prediction,
+        if layer is not None:
+            model_trainer(input_var, target_var, prediction, test_prediction,
+                          params, model_dict, X_train, y_train,
+                          X_val, y_val, network, layers)
+        else:
+            model_trainer(input_var, target_var, prediction, test_prediction,
                       params, model_dict, X_train, y_train,
                       X_val, y_val, network)
-        model_saver(network, model_dict, rd, rev)
+        model_saver(network, model_dict, rd)
 
     # Evaluating on retrained inputs
     test_model_eval(model_dict, input_var, target_var, test_prediction,
-                    X_test, y_test, rd, rev)
+                    X_test, y_test, rd)
 
     return data_dict, test_prediction, dr_alg, X_test, input_var, target_var
 #------------------------------------------------------------------------------#

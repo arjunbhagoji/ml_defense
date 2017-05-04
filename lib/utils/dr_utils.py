@@ -2,6 +2,7 @@
 Utility file containing helper functions that perform various dimensionality
 reduction technique.
 """
+import numpy as np
 
 from sklearn.decomposition import PCA
 from sklearn.random_projection import GaussianRandomProjection as GRP
@@ -32,7 +33,7 @@ def pca_dr(X_train, X_test, rd, X_val=None, rev=None, **kwargs):
     if X_val is not None:
         X_val_dr = pca.transform(X_val)
 
-    if rev != None:
+    if rev is not None:
         X_train_rev = pca.inverse_transform(X_train_dr)
         X_test_rev = pca.inverse_transform(X_test_dr)
         if X_val is not None:
@@ -153,8 +154,45 @@ def invert_dr(X, dr_alg, DR):
     return X_rev
 #------------------------------------------------------------------------------#
 
+def gradient_transform(model_dict, dr_alg):
 
-def dr_wrapper(X_train, X_test, DR, rd, y_train, X_val=None, rev=None):
+    DR = model_dict['dim_red']
+    rev = model_dict['rev']
+
+    # A is transformation matrix of dr_alg
+    if DR == 'pca':
+        if rev == None:
+            A = dr_alg.components_
+        elif rev != None:
+            B = dr_alg.components_
+            A = np.dot(B.T, B)
+    elif DR == 'pca-whiten':
+        # This S is S / sqrt(n_samples)
+        # Entries in S with very small value ~0 (last few elements) could cause
+        # stability problem when inverted
+        S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
+        V = dr_alg.components_.T
+        # A = (V / S).T
+        A = np.dot(V, np.diag(S_inv)).T
+    elif 'antiwhiten' in DR:
+        deg = int(DR.split('antiwhiten', 1)[1])
+        S = dr_alg.S_
+        if deg == -1:
+            A = np.diag(1 / S)
+        elif deg == 0:
+            A = np.eye(dr_alg.n_components)
+        elif deg >= 1:
+            A = np.eye(dr_alg.n_components)
+            for i in range(deg):
+                A = np.dot(A, np.diag(S))
+        A = np.dot(dr_alg.V_, A).T
+    else:
+        raise ValueError('Cannot get transformation matrix from this \
+                          dimensionality reduction')
+    return A
+#------------------------------------------------------------------------------#
+
+def dr_wrapper(X_train, X_test, DR, rd, y_train, rev=None, X_val=None):
     """
     A wrapper function for dimensionality reduction functions.
     """

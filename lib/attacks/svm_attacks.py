@@ -13,7 +13,7 @@ def min_dist_calc(x, clf):
 
     x_ini = x.reshape(1, -1)
     ini_class = clf.predict(x_ini)
-    w = clf.coef_[ini_class[0], :]
+    w = clf.coef_[int(ini_class[0]), :]
     d_list = []
     i_list = []
     distances = clf.decision_function(x_ini)
@@ -22,7 +22,7 @@ def min_dist_calc(x, clf):
         if j == ini_class[0]:
             continue
         w_curr = clf.coef_[j, :]
-        d_list.append(abs(distances[0, j] - distances[0, ini_class[0]])
+        d_list.append(abs(distances[0, j] - distances[0, int(ini_class[0])])
                       / np.linalg.norm(w_curr - w))
         i_list.append(j)
         i_d_list = zip(i_list, d_list)
@@ -49,7 +49,7 @@ def mult_cls_atk(clf, X_test, mean, dev_mag):
         x_ini = X_test[i, :].reshape(1, -1)
         ini_class = clf.predict(x_ini)
         min_index, min_dist = min_dist_calc(x_ini, clf)
-        w = clf.coef_[ini_class[0], :]
+        w = clf.coef_[int(ini_class[0]), :]
         w_min = clf.coef_[min_index, :]
         x_adv = (x_ini - dev_mag * ((w - w_min) / (np.linalg.norm(w - w_min))))
         X_adv[i, :] = x_adv

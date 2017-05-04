@@ -9,7 +9,11 @@ from sklearn.externals import joblib
 from matplotlib import image as img
 
 from lib.utils.dr_utils import invert_dr
+from lib.utils.dr_utils import gradient_transform
 from lib.attacks.svm_attacks import min_dist_calc
+
+def resolve_path():
+    return dirname(dirname(dirname(os.path.abspath(__file__))))
 
 #------------------------------------------------------------------------------#
 
@@ -30,7 +34,7 @@ def resolve_path_m(model_dict):
 
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_m = 'svm_models/' + dataset
     if dataset == 'GTSRB':
         rel_path_m += str(channels)
@@ -57,7 +61,7 @@ def resolve_path_o(model_dict):
 
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_o = 'svm_output_data/' + dataset
     if dataset == 'GTSRB':
         rel_path_o += str(channels)
@@ -82,10 +86,10 @@ def resolve_path_v(model_dict):
     absolute path to output directory
     """
 
-    model_name = get_model_name(model_dict)
+    model_name = get_svm_model_name(model_dict)
     dataset = model_dict['dataset']
     channels = model_dict['channels']
-    script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+    script_dir = resolve_path()
     rel_path_v = 'svm_visual_data/' + dataset + '/' + model_name
     if dataset == 'GTSRB':
         rel_path_v += str(channels)
@@ -175,23 +179,24 @@ def svm_model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_model_name(model_dict, rd=None, rev=None):
+def get_svm_model_name(model_dict, rd=None, rev=None):
     """
     Helper function to get model name from <model_dict>, <rd> and <rev>
     """
 
-    model_name = 'svm_{}_cls{}_{}_C{:.0e}'.format(model_dict['svm_type'],
-                                                  model_dict['classes'],
-                                                  model_dict['penalty'],
-                                                  model_dict['penconst'])
+    model_name = 'svm_{}_cls{}'.format(
+        model_dict['svm_type'],
+        model_dict['classes'])
 
     if model_dict['preprocess'] is not None:
         model_name += ('_' + model_dict['preprocess'])
 
     if rd is not None:
-        model_name += '_{}_{}'.format(model_dict['dim_red'], rd)
+        model_name += '_{}{}'.format(model_dict['dim_red'], rd)
         if rev is not None:
             model_name += '_rev'
+    model_name += '_{}_C{:.0e}'.format(model_dict['penalty'],
+                                        model_dict['penconst'])
 
     return model_name
 #------------------------------------------------------------------------------#
@@ -205,7 +210,7 @@ def model_loader(model_dict, rd=None, rev=None):
     print('Loading model...')
     abs_path_m = resolve_path_m(model_dict)
     try:
-        clf = joblib.load(abs_path_m + get_model_name(model_dict, rd, rev) +
+        clf = joblib.load(abs_path_m + get_svm_model_name(model_dict, rd, rev) +
                           '.pkl')
     except BaseException:
         clf = None
@@ -226,9 +231,9 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
     # Create model based on parameters
     if svm_model == 'linear':
-        dual = True
-        if penalty == 'l1':
-            dual = False
+        dual = False
+        # if penalty == 'l1':
+        #     dual = False
         clf = svm.LinearSVC(C=C, penalty=penalty, dual=dual)
     elif svm_model != 'linear':
         clf = svm.SVC(C=C, kernel=svm_model)
@@ -238,7 +243,7 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     print('Finish training in {:d}s'.format(int(time.time() - start_time)))
 
     # Save model
-    joblib.dump(clf, abs_path_m + get_model_name(model_dict, rd, rev) + '.pkl')
+    joblib.dump(clf, abs_path_m + get_svm_model_name(model_dict, rd, rev) + '.pkl')
     return clf
 #------------------------------------------------------------------------------#
 
@@ -255,53 +260,16 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_transform(model_dict, clf, dr_alg=None, M=None):
+def model_transform(model_dict, clf, dr_alg):
     """
-    Modify SVM's decision function to take into account transformation matrix to
-    transform input data in original space. Assume SVM's weights are in row
-    notation or shape : [n_classes, n_components]
-
-    Parameters
-    ----------
-    model_dict : dictionary containing model param
-    clf        : sklearn SVM classifier object
-    dr_alg     : dim. red. object used on data
-    M          : transformation matrix used in preprocessing (optional)
-
-    Returns
-    -------
-    clf        : same SVM object with weights (coef_) modified
+    Modify SVM's decision function to take into account transformation
+    matrix to transform input data in original space
     """
 
-    DR = model_dict['dim_red']
-
-    if dr_alg is not None:
-        # A is transformation matrix of dr_alg
-        if DR == 'pca':
-            A = dr_alg.components_
-        elif DR == 'pca-whiten':
-            # This S is S / sqrt(n_samples)
-            # Entries in S with very small value ~0 (last few elements) could cause
-            # stability problem when inverted
-            S_inv = 1 / np.sqrt(dr_alg.explained_variance_)
-            V = dr_alg.components_.T
-            # A = (V / S).T
-            A = np.dot(V, np.diag(S_inv)).T
-        elif 'antiwhiten' in DR:
-            A = dr_alg.transform_matrix_.T
-        elif DR == 'dca':
-            A = dr_alg.components
-        else:
-            raise ValueError('Cannot get transformation matrix from this \
-                              dimensionality reduction')
-        if M is not None:
-            A = np.dot(A, M.T)
-    elif M is not None:
-        A = M.T
-    else:
-        return clf
+    A = gradient_transform(model_dict, dr_alg)
 
     clf.coef_ = np.dot(clf.coef_, A)
+
     return clf
 #------------------------------------------------------------------------------#
 
@@ -333,17 +301,17 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     DR = model_dict['dim_red']
     # Resolve path to utility output file
     abs_path_o = resolve_path_o(model_dict)
-    fname = 'utility_' + get_model_name(model_dict)
+    fname = 'utility_' + get_svm_model_name(model_dict)
     if rd != None: fname += '_' + DR
     if rev != None: fname += '_rev'
     ofile = open(abs_path_o + fname + '.txt', 'a')
-    DR = model_dict['dim_red']
+    DR=model_dict['dim_red']
     if rd == None:
-        ofile.write('No_'+ DR + ' ')
+        ofile.write('No_'+DR+' ')
     else:
-        ofile.write(str(rd) + ' ')
+        ofile.write( str(rd) + ' ')
     # Format: <dimensions> <accuracy> <avg. dist.>
-    ofile.write('{:.2f} {:.3f}'.format(float(n_correct) / test_len * 100,
+    ofile.write('{:.2f} {:.3f} \n'.format(clf.score(X_test,y_test),
                                        sum_dist / n_correct))
     ofile.write('\n\n')
 #------------------------------------------------------------------------------#
@@ -383,7 +351,7 @@ def file_create(model_dict, rd=None, strat=None, rev=None):
 
     # Resolve absolute path to output directory
     abs_path_o = resolve_path_o(model_dict)
-    fname = get_model_name(model_dict)
+    fname = get_svm_model_name(model_dict)
     if strat is not None:
         fname += '_strat'
     if rd is not None:
@@ -423,41 +391,50 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
     no_of_img = 1    # Number of images to save
     indices = range(no_of_img)
     X_curr = X_test[indices]
-
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    channels = model_dict['channels']
     abs_path_v = resolve_path_v(model_dict)
-
     no_of_features = data_dict['no_of_features']
-    height = data_dict['height']
-    width = data_dict['width']
+    height = int(np.sqrt(no_of_features))
+    width = height
 
     # TODO: invert preprocessing
     # if model_dict['preprocess'] is not None:
 
-    adv_x_curr = adv_x[indices, :]
-    for i in indices:
-        if channels == 1:
-            adv = adv_x_curr[i].reshape((height, width))
-            orig = X_curr[i].reshape((height, width))
-            cmap = 'gray'
-        else:
-            adv = adv_x_curr[i].reshape((height, width, channels))
-            orig = X_curr[i].reshape((height, width, channels))
-            cmap = None
-
-        fname = abs_path_v
+    channels = 1
+    if channels == 1:
         if (rd is not None) and (rev is None):
-            fname += '{}_{}_{}'.format(i, DR, rd)
-        elif rd is not None:
-            fname += '{}_{}_rev_{}'.format(i, DR, rd)
-        elif rd is None:
-            fname += '{}'.format(i)
+            # Invert dr samples to their original space
+            adv_x_curr = adv_x[indices, :] + dr_alg.mean_
+            for i in indices:
+                adv = adv_x_curr[i].reshape((height, width))
+                orig = X_curr[i].reshape((height, width))
+                img.imsave(
+                    abs_path_v +
+                    '{}_{}_{}_mag{}.png'.format(i, DR, rd, dev_mag),
+                    adv * 255,
+                    vmin=0,
+                    vmax=255,
+                    cmap='gray')
+                img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
+                           orig * 255, vmin=0, vmax=255, cmap='gray')
 
-        img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255, vmin=0,
-                   vmax=255, cmap=cmap)
-        img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255, cmap=cmap)
+        elif (rd is None) or (rev is not None):
+            adv_x_curr = adv_x[indices, :]
+            for i in indices:
+                adv = adv_x_curr[i].reshape((height, width))
+                orig = X_curr[i].reshape((height, width))
+                if rd is not None:
+                    fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
+                elif rd is None:
+                    fname = abs_path_v + '{}'.format(i)
+                img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
+                           vmin=0, vmax=255, cmap='gray')
+                img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255,
+                           cmap='gray')
+    else:
+        adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
+        orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
 #------------------------------------------------------------------------------#
 
 

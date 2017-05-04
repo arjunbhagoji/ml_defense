@@ -39,10 +39,18 @@ def model_dict_create():
                         help='Specify defense mechanism')
     parser.add_argument('-dr', '--dim_red', default='pca', type=str,
                         help='Specify dimension reduction scheme')
+    parser.add_argument('--rev', action='store_true',
+            help='Train SVM and attack on DR sample reverted to original space')
     parser.add_argument('-r', '--reg', default=None, type=str,
                         help='Specify type of regularization to use')
     parser.add_argument('-b', '--batchsize', default=500, type=int,
                         help='Specify batchsize to use')
+    parser.add_argument('-pp','--preprocess', default=None, type=str,
+        help='Specify preprocessing on dataset (std, whiten, antiwhiten(*)) \
+             (default: None) \n (*) is degree of covariance (>= -1)')
+    parser.add_argument('-nl', '--nonlin', default='sigmoid', type=str,
+                        help='Specify activaton function to use')
+
     args = parser.parse_args()
 
     model_dict = {}
@@ -57,6 +65,12 @@ def model_dict_create():
     model_dict.update({'dim_red': args.dim_red})
     model_dict.update({'reg': args.reg})
     model_dict.update({'batchsize': args.batchsize})
+    model_dict.update({'preprocess': args.preprocess})
+    model_dict.update({'nonlin': args.nonlin})
+    if args.rev:
+        model_dict.update({'rev': 1})
+    else:
+        model_dict.update({'rev': None})
 
     # Determine output size
     dataset = model_dict['dataset']
@@ -72,24 +86,29 @@ def model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_model_name(model_dict, rd=None, rev=None):
+def get_model_name(model_dict, rd=None):
     """Resolve a model's name to save/load based on model_dict"""
 
     model_name = model_dict['model_name']
     depth = model_dict['depth']
     width = model_dict['width']
     DR = model_dict['dim_red']
+    rev = model_dict['rev']
 
     if model_name == 'mlp' or model_name == 'custom':
         m_name = 'nn_FC_{}_{}'.format(depth, width)
+        if model_dict['nonlin'] != 'sigmoid':
+            m_name += '{}'.format(model_dict['nonlin'])
     elif model_name == 'cnn':
         m_name = 'cnn_{}_{}'.format(depth, width)
+        if model_dict['nonlin'] != 'relu':
+            m_name += '{}'.format(model_dict['nonlin'])
 
     reg = model_dict['reg']
     if rd is not None:
         m_name += '_{}_{}'.format(rd, DR)
-    if rev is not None:
-        m_name += '_rev'
+        if rev is not None:
+            m_name += '_rev'
     if reg is not None:
         m_name += '_reg_{}'.format(reg)
     if model_name == 'custom':
@@ -222,40 +241,48 @@ def load_dataset_GTSRB(model_dict):
     return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
+#------------------------------------------------------------------------------#
+def load_dataset_HAR(model_dict):
+    abs_path_i = resolve_path_i(model_dict)
+    X_train = np.loadtxt(abs_path_i+'train/X_train.txt')
+    y_train = np.loadtxt(abs_path_i+'train/y_train.txt')
+    X_test = np.loadtxt(abs_path_i+'test/X_test.txt')
+    y_test = np.loadtxt(abs_path_i+'test/y_test.txt')
 
-def preprocess(model_dict, X_train, X_val, X_test):
-    """
-    Preprocess data (X_train, X_val, X_test) fitted on X_train.
+    y_train = y_train - 1
+    y_test = y_test - 1
+    return X_train, y_train, X_test, y_test
+#------------------------------------------------------------------------------#
 
-    Returns
-    -------
-    X_train, X_val, X_test : preprocessed data (X = np.dot(X, A))
-    A : transformation matrix applied on data in row notation
-        [n_samples, n_features] assuming input data has been centered
+#------------------------------------------------------------------------------#
+def preprocess(model_dict, data):
     """
+    Preprocess data (tuple of X_train, y_train, X_val, y_val, X_test, y_test)
+    """
+
+    preprocess = model_dict['preprocess']
+    X_train, y_train, X_val, y_val, X_test, y_test = data
 
     # Get data shape
     data_dict = get_data_shape(X_train, X_test, X_val)
     n_features = data_dict['no_of_features']
-    # Ensure that input data has shape [n_samples, n_features]
+    # Reshape data to [n_samples, n_features]
     X_train = X_train.reshape(-1, n_features)
     X_test = X_test.reshape(-1, n_features)
     X_val = X_val.reshape(-1, n_features)
 
     # Construct preprocessor
-    preprocess = model_dict['preprocess']
     if preprocess == 'std':
         # Preprocess with sklearn StandardScaler (zero mean, unit variance)
         pp = StandardScaler()
     elif preprocess == 'whiten':
         # Preprocess data by projecting to basis that covariance of data is an
         # identity matrix
-        pp = AntiWhiten(n_components=n_features, deg=-1)
-    elif 'antiwhiten' in preprocess:
+        pp = AntiWhiten(n_components=n_features, whiten=-1)
+    elif preprocess == 'antiwhiten':
         # Preprocess data by projecting to basis that covariance of data is
-        # exponentiated to a certain degree <deg>
-        deg = int(preprocess.split('antiwhiten', 1)[1])
-        pp = AntiWhiten(n_components=n_features, deg=deg)
+        # exponentiated to a certain degree (1)
+        pp = AntiWhiten(n_components=n_features, whiten=1)
     else:
         raise ValueError('Unrecognized preprocessing method')
 
@@ -265,28 +292,25 @@ def preprocess(model_dict, X_train, X_val, X_test):
     X_test = pp.transform(X_test)
     X_val = pp.transform(X_val)
 
-    # Retrieve transformation matrix
-    if preprocess == 'std':
-        A = np.diag(1 / pp.scale_)
-    elif preprocess == 'whiten':
-        A = pp.transform_matrix_
-    elif preprocess == 'antiwhiten':
-        A = pp.transform_matrix_
-
-    return X_train, X_val, X_test, A
+    return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
-
+#------------------------------------------------------------------------------#
 def load_dataset(model_dict):
     """Load and return dataset specified in model_dict"""
 
     dataset = model_dict['dataset']
     if dataset == 'MNIST':
-        return load_dataset_MNIST(model_dict)
+        data = load_dataset_MNIST(model_dict)
     elif dataset == 'GTSRB':
-        return load_dataset_GTSRB(model_dict)
+        data = load_dataset_GTSRB(model_dict)
     elif dataset == 'HAR':
-        return load_dataset_HAR(model_dict)
+        data = load_dataset_HAR(model_dict)
+
+    if model_dict['preprocess'] is not None:
+        data = preprocess(model_dict, data)
+
+    return data
 #------------------------------------------------------------------------------#
 
 
@@ -326,11 +350,11 @@ def get_data_shape(X_train, X_test, X_val=None):
         channels = X_train.shape[1]
         height = X_train.shape[2]
         width = X_train.shape[3]
-        no_of_features = channels * height * width
-        data_dict.update({'height': height,
-                          'width': width,
-                          'channels': channels,
-                          'no_of_features': no_of_features})
+        features_per_c = height*width
+        no_of_features = channels*features_per_c
+        data_dict.update({'height':height, 'width':width, 'channels':channels,
+                          'features_per_c':features_per_c,
+                          'no_of_features':no_of_features})
 
     return data_dict
 #------------------------------------------------------------------------------#
@@ -370,7 +394,7 @@ def reshape_data(X, data_dict, rd=None, rev=None):
 
 
 def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
-                dr_alg=None, rev=None):
+                dr_alg=None):
     """Save <no_of_img> samples as image files in visual_data folder"""
 
     from lib.utils.dr_utils import invert_dr
@@ -382,6 +406,7 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     atk = model_dict['attack']
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
+    rev = model_dict['rev_flag']
     abs_path_v = resolve_path_v(model_dict)
 
     if (rd is not None) and (rev is None):
@@ -447,24 +472,18 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
 #------------------------------------------------------------------------------#
 
 
-def utility_write(model_dict, test_acc, test_conf, rd, rev):
+def utility_write(model_dict, test_acc, test_conf, rd):
     """
     Write utility (accuracy and confidence on test set) of the model on a file.
     The output file is saved in output_data folder.
     """
-    # model_name = model_dict['model_name']
-    # if model_name in ('mlp', 'custom'):
-    #     depth = model_dict['depth']
-    #     width = model_dict['width']
-    #     fname = 'Utility_nn_{}_{}.txt'.format(depth, width)
-    # elif model_name == 'cnn':
-    #     fname = 'Utility_cnn_papernot.txt'
 
     fname = get_model_name(model_dict)
     fname = 'Utility_' + fname + '.txt'
     abs_path_o = resolve_path_o(model_dict)
     ofile = open(abs_path_o + fname, 'a')
     DR = model_dict['dim_red']
+    rev = model_dict['rev']
     if rd is None:
         ofile.write('No_' + DR + ':\t')
     else:
@@ -477,7 +496,7 @@ def utility_write(model_dict, test_acc, test_conf, rd, rev):
 #------------------------------------------------------------------------------#
 
 
-def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
+def file_create(model_dict, is_defense, rd, strat_flag=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type, strat, and rev
@@ -488,10 +507,12 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 
     fname = model_dict['attack']
     fname += '_' + get_model_name(model_dict)
+    reg = model_dict['reg']
+    rev = model_dict['rev']
 
     if strat_flag is not None:
         fname += '_strat'
-    if rev is not None:
+    if (rev is not None and rd is not None):
         fname += '_rev'
     if rd is not None:
         fname += '_' + model_dict['dim_red']
@@ -505,12 +526,11 @@ def file_create(model_dict, is_defense, rd, rev=None, strat_flag=None):
 
 
 def print_output(model_dict, output_list, dev_list, is_defense=False, rd=None,
-                 rev=None, strat_flag=None):
+                 strat_flag=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
-
-    plotfile = file_create(model_dict, is_defense, rd, rev, strat_flag)
+    plotfile = file_create(model_dict, is_defense, rd, strat_flag)
     plotfile.write('\\\small{' + str(rd) + '}\n')
     # plotfile.write('Mag.   Wrong            Adversarial    Pure      \n')
     for i in range(len(dev_list)):

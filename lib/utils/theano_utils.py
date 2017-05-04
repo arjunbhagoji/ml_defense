@@ -52,7 +52,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
-def loss_fn(model_predict, target_var, reg=None, network=None):
+def loss_fn(model_predict, target_var, reg=None, network=None, layers=None):
 
     """
     Create a loss expression for training, i.e., a scalar objective we want
@@ -67,8 +67,15 @@ def loss_fn(model_predict, target_var, reg=None, network=None):
     #l2_penalty=lasagne.regularization.regularize_layer_params_weighted(layers,
                                                                             #l2)
     if reg == 'l2':
-        l2_penalty = lasagne.regularization.regularize_network_params(network, l2)
-        loss_temp = loss_temp + 1e-7 * l2_penalty
+        if layers is not None:
+            layer_1 = layers[0]
+            layer_2 = layers[1]
+            layer_dict={layer_1:1e-7}
+            l2_penalty=lasagne.regularization.regularize_layer_params_weighted(layer_dict,
+                                                                                    l2)
+        else:
+            l2_penalty = 1e-7 * lasagne.regularization.regularize_network_params(network, l2)
+        loss_temp = loss_temp + l2_penalty
     elif reg =='l1':
         l1_penalty = lasagne.regularization.regularize_network_params(network, l1)
         loss_temp = loss_temp + 1e-7 * l1_penalty
@@ -117,7 +124,7 @@ def conf_fn(input_var, model_predict):
 
 #------------------------------------------------------------------------------#
 def model_trainer(input_var, target_var, prediction, test_prediction, params,
-                  model_dict, X_train, y_train, X_val, y_val, network):
+                  model_dict, X_train, y_train, X_val, y_val, network, layers=None):
 
     """
     Train NN model with (X_train, y_train) and output training loss, validation
@@ -132,7 +139,9 @@ def model_trainer(input_var, target_var, prediction, test_prediction, params,
         loss = loss_fn(prediction, target_var)
     elif model_dict['reg'] != None:
         reg = model_dict['reg']
-        loss = loss_fn(prediction, target_var, reg, network)
+        if layers is not None:
+            loss = loss_fn(prediction, target_var, reg, network, layers)
+        else: loss = loss_fn(prediction, target_var, reg, network)
     # Create update expressions for training, i.e., how to modify the
     # parameters at each training step. Here, we use Stochastic Gradient
     # Descent (SGD) with Nesterov momentum.
@@ -186,7 +195,7 @@ def model_trainer(input_var, target_var, prediction, test_prediction, params,
 
 #------------------------------------------------------------------------------#
 def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
-                    y_test, rd=None, rev=None):
+                    y_test, rd=None):
 
     """
     Evaluate accuracy and confidence of NN model on (X_test, y_test). Result is
@@ -220,5 +229,5 @@ def test_model_eval(model_dict, input_var, target_var, test_prediction, X_test,
     test_acc = test_acc/test_batches*100
     test_conf = test_conf/test_batches
 
-    utility_write(model_dict,test_acc,test_conf,rd,rev)
+    utility_write(model_dict,test_acc,test_conf,rd)
 #------------------------------------------------------------------------------#

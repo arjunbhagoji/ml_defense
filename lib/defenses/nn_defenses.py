@@ -17,7 +17,7 @@ from ..utils.dr_utils import *
 # Function to implement the reconstruction defense
 def recons_defense(model_dict, data_dict, input_var, target_var, test_prediction,
                    dev_list, adv_x_ini, rd, X_train, y_train, X_test, y_test):
-                   
+
     """
     Evaluates effect of reconstruction defense on adversarial success. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -31,7 +31,7 @@ def recons_defense(model_dict, data_dict, input_var, target_var, test_prediction
     : param y_test: Test data labels
     """
 
-    rev_flag = 1
+    rev_flag = model_dict['rev']
     dim_red = model_dict['dim_red']
     X_val = None
 
@@ -65,8 +65,7 @@ def recons_defense(model_dict, data_dict, input_var, target_var, test_prediction
     print_output(model_dict, output_list, dev_list, is_defense=True, rd=rd)
 
     # Saving images
-    save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd, dr_alg,
-                rev_flag)
+    save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd, dr_alg)
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -116,5 +115,5 @@ def retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train, y_train,
     print_output(model_dict, output_list, dev_list, is_defense, rd)
 
     # Saving images
-    save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd, dr_alg)
+    # save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd, dr_alg)
 #------------------------------------------------------------------------------#
