@@ -57,21 +57,15 @@ set style line 24 lt rgb "#F79CD4" lw 4
 # {15,207,192}  "#0FCFC0"
 # {247,156,212} "#F79CD4"
 
-string_p = 'plots/GTSRB3/'
-string_o = 'svm_output_data/GTSRB3/'
+set output 'plots/utility_svm_linear_cls10_l2_C1e+00_antiwhiten4.png'
 
-#mname = 'svm_linear_cls10_l2_C1e+00_std_strat_pca'
-
-set output string_p.mname.'.png'
-
-set xlabel 'r$\epsilon$'
-set ylabel '\small{Adversarial success (\%)}' offset 2
-set xrange [0:2.5]
-set yrange [0:1.0]
+set xlabel '\small{Average minimum adversarial perturbation}'
+set ylabel '\small{Accuracy on benign data}'
+set xrange [0:2.0]
+set yrange [60:100]
 # set margins 3, 1, 2, 2
-set key right bottom
-set title 'Optimal Attack on '.mname
+# set key right bottom
+set title 'MNIST Linear SVM accuracy/robustness tradeoff'
 
-plot for [IDX=0:6] string_o.mname.'.txt' i (2*IDX) using 1:4 with lines linestyle (IDX+1) title columnheader(1)
-
-unset output
+plot for [IDX=0:4] 'svm_output_data/MNIST/utility_svm_linear_cls10_l2_C1e+00_antiwhiten4.txt' i (3*IDX) u 3:2:1 w labels point ls 1 ps 2 offset character 0,character -1 notitle, \
+1e20 w points ls 1 ps 2 title '1e+00'
