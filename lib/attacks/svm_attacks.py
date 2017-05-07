@@ -58,7 +58,7 @@ def mult_cls_atk(clf, X_test, mean, dev_mag, img_flag):
     # Clip adv. examples if its values exceed original input range
     if img_flag:
         X_adv += mean
-        np.clip(X_adv, 0, 1)
+        X_adv = np.clip(X_adv, 0, 1)
         X_adv -= mean
 
     return X_adv, y_ini

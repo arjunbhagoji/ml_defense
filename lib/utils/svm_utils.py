@@ -8,13 +8,14 @@ from sklearn import svm
 from sklearn.externals import joblib
 from matplotlib import image as img
 
-from lib.utils.dr_utils import invert_dr
-from lib.utils.dr_utils import gradient_transform
+from lib.utils.dr_utils import invert_dr, gradient_transform
 from lib.attacks.svm_attacks import min_dist_calc
+
+#------------------------------------------------------------------------------#
+
 
 def resolve_path():
     return dirname(dirname(dirname(os.path.abspath(__file__))))
-
 #------------------------------------------------------------------------------#
 
 
@@ -90,9 +91,10 @@ def resolve_path_v(model_dict):
     dataset = model_dict['dataset']
     channels = model_dict['channels']
     script_dir = resolve_path()
-    rel_path_v = 'svm_visual_data/' + dataset + '/' + model_name
+    rel_path_v = 'svm_visual_data/' + dataset
     if dataset == 'GTSRB':
         rel_path_v += str(channels)
+    rel_path_v += '/' + model_name
     abs_path_v = os.path.join(script_dir, rel_path_v + '/')
     if not os.path.exists(abs_path_v):
         os.makedirs(abs_path_v)
@@ -185,8 +187,7 @@ def get_svm_model_name(model_dict, rd=None, rev=None):
     """
 
     model_name = 'svm_{}_cls{}'.format(
-        model_dict['svm_type'],
-        model_dict['classes'])
+        model_dict['svm_type'], model_dict['classes'])
 
     if model_dict['preprocess'] is not None:
         model_name += ('_' + model_dict['preprocess'])
@@ -195,8 +196,9 @@ def get_svm_model_name(model_dict, rd=None, rev=None):
         model_name += '_{}{}'.format(model_dict['dim_red'], rd)
         if rev is not None:
             model_name += '_rev'
+
     model_name += '_{}_C{:.0e}'.format(model_dict['penalty'],
-                                        model_dict['penconst'])
+                                       model_dict['penconst'])
 
     return model_name
 #------------------------------------------------------------------------------#
@@ -231,9 +233,9 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
 
     # Create model based on parameters
     if svm_model == 'linear':
-        dual = False
-        # if penalty == 'l1':
-        #     dual = False
+        dual = True
+        if penalty == 'l1':
+            dual = False
         clf = svm.LinearSVC(C=C, penalty=penalty, dual=dual)
     elif svm_model != 'linear':
         clf = svm.SVC(C=C, kernel=svm_model)
@@ -243,7 +245,8 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     print('Finish training in {:d}s'.format(int(time.time() - start_time)))
 
     # Save model
-    joblib.dump(clf, abs_path_m + get_svm_model_name(model_dict, rd, rev) + '.pkl')
+    joblib.dump(clf, abs_path_m +
+                get_svm_model_name(model_dict, rd, rev) + '.pkl')
     return clf
 #------------------------------------------------------------------------------#
 
@@ -260,13 +263,36 @@ def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_transform(model_dict, clf, dr_alg):
+def model_transform(model_dict, clf, dr_alg=None, M=None):
     """
     Modify SVM's decision function to take into account transformation
     matrix to transform input data in original space
+
+    Parameters
+    ----------
+    model_dict :
+                 dictionary containing model param
+    clf        :
+                 sklearn SVM classifier object
+    dr_alg     :
+                 dim. red. object used on data
+    M          :
+                 transformation matrix used in preprocessing (optional)
+
+    Returns
+    -------
+    clf        :
+                 same SVM object with weights (coef_) modified
     """
 
-    A = gradient_transform(model_dict, dr_alg)
+    if dr_alg is not None:
+        A = gradient_transform(model_dict, dr_alg)
+        if M is not None:
+            A = np.dot(A, M.T)
+    elif M is not None:
+        A = M.T
+    else:
+        return clf
 
     clf.coef_ = np.dot(clf.coef_, A)
 
@@ -302,17 +328,19 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     # Resolve path to utility output file
     abs_path_o = resolve_path_o(model_dict)
     fname = 'utility_' + get_svm_model_name(model_dict)
-    if rd != None: fname += '_' + DR
-    if rev != None: fname += '_rev'
+    if rd != None:
+        fname += '_' + DR
+    if rev != None:
+        fname += '_rev'
     ofile = open(abs_path_o + fname + '.txt', 'a')
-    DR=model_dict['dim_red']
+    DR = model_dict['dim_red']
     if rd == None:
-        ofile.write('No_'+DR+' ')
+        ofile.write('No_' + DR + ' ')
     else:
-        ofile.write( str(rd) + ' ')
+        ofile.write(str(rd) + ' ')
     # Format: <dimensions> <accuracy> <avg. dist.>
-    ofile.write('{:.2f} {:.3f} \n'.format(clf.score(X_test,y_test),
-                                       sum_dist / n_correct))
+    ofile.write('{:.2f} {:.3f} \n'.format(clf.score(X_test, y_test),
+                                          sum_dist / n_correct))
     ofile.write('\n\n')
 #------------------------------------------------------------------------------#
 
@@ -390,51 +418,39 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
 
     no_of_img = 1    # Number of images to save
     indices = range(no_of_img)
-    X_curr = X_test[indices]
+
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
+    channels = model_dict['channels']
     abs_path_v = resolve_path_v(model_dict)
+
     no_of_features = data_dict['no_of_features']
-    height = int(np.sqrt(no_of_features))
-    width = height
+    height = data_dict['height']
+    width = data_dict['width']
 
-    # TODO: invert preprocessing
-    # if model_dict['preprocess'] is not None:
+    for i in indices:
+        if channels == 1:
+            adv = adv_x[i].reshape((height, width))
+            orig = X_test[i].reshape((height, width))
+            cmap = 'gray'
+        else:
+            adv = adv_x[i].reshape((channels, height, width))
+            adv = adv.swapaxes(0, 2).swapaxes(0, 1)
+            orig = X_test[i].reshape((channels, height, width))
+            orig = orig.swapaxes(0, 2).swapaxes(0, 1)
+            cmap = None
 
-    channels = 1
-    if channels == 1:
+        fname = abs_path_v
         if (rd is not None) and (rev is None):
-            # Invert dr samples to their original space
-            adv_x_curr = adv_x[indices, :] + dr_alg.mean_
-            for i in indices:
-                adv = adv_x_curr[i].reshape((height, width))
-                orig = X_curr[i].reshape((height, width))
-                img.imsave(
-                    abs_path_v +
-                    '{}_{}_{}_mag{}.png'.format(i, DR, rd, dev_mag),
-                    adv * 255,
-                    vmin=0,
-                    vmax=255,
-                    cmap='gray')
-                img.imsave(abs_path_v + '{}_{}_{}_orig.png'.format(i, DR, rd),
-                           orig * 255, vmin=0, vmax=255, cmap='gray')
+            fname += '{}_{}_{}'.format(i, DR, rd)
+        elif rd is not None:
+            fname += '{}_{}_rev_{}'.format(i, DR, rd)
+        elif rd is None:
+            fname += '{}'.format(i)
 
-        elif (rd is None) or (rev is not None):
-            adv_x_curr = adv_x[indices, :]
-            for i in indices:
-                adv = adv_x_curr[i].reshape((height, width))
-                orig = X_curr[i].reshape((height, width))
-                if rd is not None:
-                    fname = abs_path_v + '{}_{}_rev_{}'.format(i, DR, rd)
-                elif rd is None:
-                    fname = abs_path_v + '{}'.format(i)
-                img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
-                           vmin=0, vmax=255, cmap='gray')
-                img.imsave(fname + '_orig.png', orig * 255, vmin=0, vmax=255,
-                           cmap='gray')
-    else:
-        adv = adv_x[i].swapaxes(0, 2).swapaxes(0, 1)
-        orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
+        img.imsave(fname + '_mag{}.png'.format(dev_mag), adv, vmin=0, vmax=1,
+                   cmap=cmap)
+        img.imsave(fname + '_orig.png', orig, vmin=0, vmax=1, cmap=cmap)
 #------------------------------------------------------------------------------#
 
 

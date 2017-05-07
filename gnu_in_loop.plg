@@ -57,10 +57,8 @@ set style line 24 lt rgb "#F79CD4" lw 4
 # {15,207,192}  "#0FCFC0"
 # {247,156,212} "#F79CD4"
 
-string_p = 'plots/GTSRB3/'
-string_o = 'svm_output_data/GTSRB3/'
-
-#mname = 'svm_linear_cls10_l2_C1e+00_std_strat_pca'
+string_p = 'plots/'
+string_o = 'svm_output_data/'
 
 set output string_p.mname.'.png'
 
