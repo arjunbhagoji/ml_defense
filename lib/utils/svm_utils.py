@@ -193,7 +193,7 @@ def get_svm_model_name(model_dict, rd=None, rev=None):
         model_name += ('_' + model_dict['preprocess'])
 
     if rd is not None:
-        model_name += '_{}{}'.format(model_dict['dim_red'], rd)
+        model_name += '_{}_{}'.format(model_dict['dim_red'], rd)
         if rev is not None:
             model_name += '_rev'
 
