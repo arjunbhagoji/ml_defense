@@ -146,7 +146,11 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val,
     if rd != None:
         # Doing dimensionality reduction on dataset
         print("Doing {} with rd={} over the training data".format(dim_red, rd))
-        X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
+        if X_val is not None:
+            X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
+                                                    y_train, rev, X_val)
+        else:
+            X_train, X_test, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
                                                     y_train, rev, X_val)
     else: dr_alg = None
 
@@ -155,7 +159,7 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val,
     no_of_dim = data_dict['no_of_dim']
 
     # Prepare Theano variables for inputs and targets
-    if no_of_dim == 2: input_var = T.tensor('inputs')
+    if no_of_dim == 2: input_var = T.matrix('inputs')
     elif no_of_dim == 3: input_var = T.tensor3('inputs')
     elif no_of_dim == 4: input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')

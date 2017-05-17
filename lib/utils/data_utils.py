@@ -76,10 +76,13 @@ def model_dict_create():
     dataset = model_dict['dataset']
     if dataset == 'HAR':
         n_out = 6
+        model_dict.update({'clip': None})
     elif dataset == 'MNIST':
         n_out = 10
+        model_dict.update({'clip': 1})
     elif dataset == 'GTSRB':
         n_out = 43
+        model_dict.update({'clip': 1})
     model_dict.update({'n_out': n_out})
 
     return model_dict
@@ -338,7 +341,10 @@ def get_data_shape(X_train, X_test, X_val=None):
     # Updates number of features(, number of channels, width, height)
     if no_of_dim == 2:
         no_of_features = X_train.shape[1]
-        data_dict.update({'no_of_features': no_of_features})
+        channels = 1
+        features_per_c = no_of_features
+        data_dict.update({'no_of_features': no_of_features, 'channels': channels,
+                              'features_per_c': features_per_c})
     elif no_of_dim == 3:
         channels = X_train.shape[1]
         features_per_c = X_train.shape[2]
@@ -393,7 +399,7 @@ def reshape_data(X, data_dict, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
+def save_images(model_dict, data_dict, X_test, adv_x, dev_list, mean, rd=None,
                 dr_alg=None):
     """Save <no_of_img> samples as image files in visual_data folder"""
 
@@ -406,7 +412,7 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
     atk = model_dict['attack']
     dataset = model_dict['dataset']
     DR = model_dict['dim_red']
-    rev = model_dict['rev_flag']
+    rev = model_dict['rev']
     abs_path_v = resolve_path_v(model_dict)
 
     if (rd is not None) and (rev is None):
@@ -427,12 +433,12 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 adv_x_rev = invert_dr(adv_curr, dr_alg, DR)
                 adv_x_rev = adv_x_rev.reshape(
                     (no_of_img, channels, height, width))
-                np.clip(adv_x, 0, 1)
                 for i in indices:
                     adv = adv_x_rev[i].reshape((height, width))
                     orig = X_curr_rev[i].reshape((height, width))
-                    img.imsave(
-                        abs_path_v +
+                    adv += mean
+                    orig += mean
+                    img.imsave(abs_path_v +
                         '{}_{}_{}_{}_mag{}.png'.format(atk, i, DR, d, dev_mag),
                         adv * 255,
                         vmin=0,
@@ -450,20 +456,19 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, rd=None,
                 adv_x_curr = adv_x[indices, :, dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height, width))
-                    orig = X_curr[i].reshape((height, width))
+                    orig = (X_curr[i]+mean[0]).reshape((height, width))
+                    mean_arr = mean[0].reshape((height,width))
+                    adv += mean[0]
                     if rd is not None:
                         fname = abs_path_v + ' {}_{}_{}_rev_{}'.format(atk, i,
                                                                        DR, rd)
                     elif rd is None:
                         fname = abs_path_v + '{}_{}'.format(atk, i)
                     img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
-                                       vmin=0, vmax=255, cmap='gray')
-                    img.imsave(
-                        fname + '_orig.png',
-                        orig * 255,
-                        vmin=0,
-                        vmax=255,
-                        cmap='gray')
+                                vmin =0, vmax =255, cmap='gray')
+                    img.imsave(fname + '_orig.png', orig * 255, vmin =0, vmax =255, cmap='gray')
+                    img.imsave(fname + '_mean.png', mean_arr * 255, vmin =0, vmax =255, cmap='gray')
+                    # img.imsave('test_new.png', (X_curr[0]+mean[0]).reshape((height,width)) * 255,  cmap='gray')
             dev_count += 1
     # else:
         # TODO

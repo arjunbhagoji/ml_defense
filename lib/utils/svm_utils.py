@@ -5,12 +5,14 @@ import time
 import numpy as np
 from os.path import dirname
 from sklearn import svm
+from sklearn import linear_model
 from sklearn.externals import joblib
 from matplotlib import image as img
 
 from lib.utils.dr_utils import invert_dr
 from lib.utils.dr_utils import gradient_transform
 from lib.attacks.svm_attacks import min_dist_calc
+from lib.utils.data_utils import load_dataset, get_data_shape
 
 def resolve_path():
     return dirname(dirname(dirname(os.path.abspath(__file__))))
@@ -179,7 +181,7 @@ def svm_model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_svm_model_name(model_dict, rd=None, rev=None):
+def get_svm_model_name(model_dict, adv=None, adv_mag=None, rd=None, rev=None):
     """
     Helper function to get model name from <model_dict>, <rd> and <rev>
     """
@@ -190,6 +192,8 @@ def get_svm_model_name(model_dict, rd=None, rev=None):
 
     if model_dict['preprocess'] is not None:
         model_name += ('_' + model_dict['preprocess'])
+    if adv is not None:
+        model_name += '_adv_{}'.format(adv_mag)
 
     if rd is not None:
         model_name += '_{}{}'.format(model_dict['dim_red'], rd)
@@ -202,15 +206,16 @@ def get_svm_model_name(model_dict, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_loader(model_dict, rd=None, rev=None):
+def model_loader(model_dict, adv=None, rd=None, rev=None):
     """
     Returns a classifier object if it already exists. Returns None, otherwise.
     """
-
+    if adv is None:
+        adv_mag = None
     print('Loading model...')
     abs_path_m = resolve_path_m(model_dict)
     try:
-        clf = joblib.load(abs_path_m + get_svm_model_name(model_dict, rd, rev) +
+        clf = joblib.load(abs_path_m + get_svm_model_name(model_dict, adv, adv_mag, rd, rev) +
                           '.pkl')
     except BaseException:
         clf = None
@@ -219,7 +224,7 @@ def model_loader(model_dict, rd=None, rev=None):
 #------------------------------------------------------------------------------#
 
 
-def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
+def model_trainer(model_dict, X_train, y_train, adv=None, rd=None, rev=None):
     """Trains and returns SVM. Also save SVM to file."""
 
     print('Training model...')
@@ -228,6 +233,8 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     svm_model = model_dict['svm_type']
     C = model_dict['penconst']
     penalty = model_dict['penalty']
+    if adv is None:
+        adv_mag = None
 
     # Create model based on parameters
     if svm_model == 'linear':
@@ -235,6 +242,7 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
         # if penalty == 'l1':
         #     dual = False
         clf = svm.LinearSVC(C=C, penalty=penalty, dual=dual)
+        # clf = linear_model.SGDClassifier(alpha=C,l1_ratio=0)
     elif svm_model != 'linear':
         clf = svm.SVC(C=C, kernel=svm_model)
 
@@ -243,19 +251,19 @@ def model_trainer(model_dict, X_train, y_train, rd=None, rev=None):
     print('Finish training in {:d}s'.format(int(time.time() - start_time)))
 
     # Save model
-    joblib.dump(clf, abs_path_m + get_svm_model_name(model_dict, rd, rev) + '.pkl')
+    joblib.dump(clf, abs_path_m + get_svm_model_name(model_dict, adv, adv_mag, rd, rev) + '.pkl')
     return clf
 #------------------------------------------------------------------------------#
 
 
-def model_creator(model_dict, X_train, y_train, rd=None, rev=None):
+def model_creator(model_dict, X_train, y_train, adv=None, rd=None, rev=None):
     """Returns a SVM classifier"""
 
     # Load model based on model_dict
-    clf = model_loader(model_dict, rd, rev)
+    clf = model_loader(model_dict, adv, rd, rev)
     # If model does not exist, train a new SVM
     if clf is None:
-        clf = model_trainer(model_dict, X_train, y_train, rd, rev)
+        clf = model_trainer(model_dict, X_train, y_train, adv, rd, rev)
     return clf
 #------------------------------------------------------------------------------#
 
@@ -274,7 +282,7 @@ def model_transform(model_dict, clf, dr_alg):
 #------------------------------------------------------------------------------#
 
 
-def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
+def model_tester(model_dict, clf, X_test, y_test, adv=None, adv_mag=None, rd=None, rev=None):
     """
     Calculate model's accuracy and average normalized distance from correctly
     classified samples to separating hyperplane of corresponding class
@@ -304,14 +312,17 @@ def model_tester(model_dict, clf, X_test, y_test, rd=None, rev=None):
     fname = 'utility_' + get_svm_model_name(model_dict)
     if rd != None: fname += '_' + DR
     if rev != None: fname += '_rev'
+    if adv != None: fname += '_adv'
     ofile = open(abs_path_o + fname + '.txt', 'a')
     DR=model_dict['dim_red']
     if rd == None:
         ofile.write('No_'+DR+' ')
     else:
         ofile.write( str(rd) + ' ')
+    if adv_mag != None:
+        ofile.write(','+str(adv_mag)+' ')
     # Format: <dimensions> <accuracy> <avg. dist.>
-    ofile.write('{:.2f} {:.3f} \n'.format(clf.score(X_test,y_test),
+    ofile.write('{:.2f} {:.3f} \n'.format(100*clf.score(X_test,y_test),
                                        sum_dist / n_correct))
     ofile.write('\n\n')
 #------------------------------------------------------------------------------#
@@ -343,7 +354,7 @@ def acc_calc_all(clf, X_adv, y_test, y_ini):
 #------------------------------------------------------------------------------#
 
 
-def file_create(model_dict, rd=None, strat=None, rev=None):
+def file_create(model_dict, adv=None, rd=None, strat=None, rev=None, is_defense=None):
     """
     Creates and returns a file descriptor, named corresponding to model,
     attack type, strat, and rev
@@ -358,19 +369,25 @@ def file_create(model_dict, rd=None, strat=None, rev=None):
         fname += '_' + model_dict['dim_red']
     if rev is not None:
         fname += '_rev'
+    if is_defense is not None:
+        fname += '_retrain'
+    if adv is not None:
+        fname += '_adv'
     plotfile = open(abs_path_o + fname + '.txt', 'a')
     return plotfile, fname
 #------------------------------------------------------------------------------#
 
 
-def print_svm_output(model_dict, output_list, dev_list, rd=None, strat=None,
-                     rev=None):
+def print_svm_output(model_dict, output_list, dev_list, adv=None, adv_mag=None, rd=None, strat=None,
+                     rev=None, is_defense=None):
     """
     Creates an output file reporting accuracy and confidence of attack
     """
 
-    plotfile, fname = file_create(model_dict, rd, strat, rev)
+    plotfile, fname = file_create(model_dict, adv, rd, strat, rev, is_defense)
     plotfile.write('\\\\small{{{}}}\n'.format(rd))
+    if adv_mag is not None:
+        plotfile.write('\\\\small{{{}}}\n'.format(adv_mag))
     for i in range(len(dev_list)):
         plotfile.write('{0:.3f}'.format(dev_list[i]))
         for item in output_list[i]:
@@ -437,56 +454,50 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
         orig = X_test[i].swapaxes(0, 2).swapaxes(0, 1)
 #------------------------------------------------------------------------------#
 
+def svm_setup():
+    # Parse arguments and store in model_dict
+    model_dict = svm_model_dict_create()
 
-# def plotter(acc_def, acc, dev_list, rd_list, recons_flag=0, strat_flag=0):
-#
-#     import matplotlib
-#     matplotlib.use('Agg')
-#     import matplotlib.pyplot as plt
-#     from matplotlib.lines import Line2D
-#     import glob as glob
-#     import os
-#     from matplotlib.pyplot import cm
-#     from cycler import cycler
-#
-#     if strat_flag == 1: title = 'Strategic gradient '
-#     elif strat_flag == 0: title = 'Gradient '
-#     title += 'on DCA reduced dimensions for MNIST data with '
-#     fname ='MNIST_svm_dca'
-#     if recons_flag == 1:
-#         title += 'recons defense'
-#         fname += '_recon.png'
-#     elif recons_flag == 0:
-#         title += 'retrain defense'
-#         fname += '_retrain'
-#         if strat_flag == 1: fname += '_strat'
-#         fname += '.png'
-#
-#     font = {'size': 17}
-#     matplotlib.rc('font', **font)
-#     cm = plt.get_cmap('gist_rainbow')
-#     fig, ax = plt.subplots(1, 1, figsize=(12,9))
-#     ax.get_xaxis().tick_bottom()
-#     ax.get_yaxis().tick_left()
-#     colors = ('b', 'g', 'r', 'c', 'm', 'y', 'k')
-#     markers = ('o', '^', 'x', 'D', 's', '|', 'v')
-#     handle_list = []
-#     count = 0
-#     for item in rd_list:
-#         count += 1
-#         color = colors[count % len(colors)]
-#         style = markers[count % len(markers)]
-#         handle_list.append(plt.plot(dev_list, np.multiply(100, acc_def[count-1, :]),
-#         linestyle='-', marker=style, color=color, markersize=10, label=item))
-#     handle_list.append(plt.plot(dev_list, np.multiply(100, acc),
-#     linestyle='-', marker='o', color='b', markersize=10, label='No defense'))
-#
-#     plt.xlabel(r'Adversarial perturbation')
-#     plt.ylabel('Adversarial success')
-#     plt.title(title)
-#     plt.xticks()
-#     plt.legend(loc=2, fontsize=14)
-#     plt.ylim(0, 100)
-#     plt.savefig(fname, bbox_inches='tight')
-#     plt.show()
-# #------------------------------------------------------------------------------#
+    # Load dataset and create data_dict to store metadata
+    print('Loading data...')
+    dataset = model_dict['dataset']
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+        X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(
+            model_dict)
+        img_flag = None
+    elif dataset == 'HAR':
+        X_train, y_train, X_test, y_test = load_dataset(model_dict)
+        img_flag = None
+    # TODO: 2 classes case
+    # if model_dict['classes'] == 2:
+    #     X_train = X_train
+
+    data_dict = get_data_shape(X_train, X_test)
+    n_features = data_dict['no_of_features']
+
+    # Reshape dataset to have dimensions suitable for SVM
+    X_train_flat = X_train.reshape(-1, n_features)
+    X_test_flat = X_test.reshape(-1, n_features)
+    # Center dataset with mean of training set
+    mean = np.mean(X_train_flat, axis=0)
+    X_train_flat -= mean
+    X_test_flat -= mean
+
+    # Assign parameters
+    if dataset == 'MNIST':
+        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
+        # rd_list = [784]
+    elif dataset == 'HAR':
+        rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        # rd_list = [561]
+    n_rd = len(rd_list)
+    clear_flag = None
+    # Clear old output files
+    if clear_flag ==1:
+        abs_path_o = resolve_path_o(model_dict)
+        _, fname = file_create(model_dict)
+        os.remove(abs_path_o + fname + '.txt')
+        _, fname = file_create(model_dict, rd=1, strat=strat_flag, rev=rev_flag)
+        os.remove(abs_path_o + fname + '.txt')
+
+    return model_dict, data_dict, X_train_flat, y_train, X_test_flat, y_test, rd_list, mean, img_flag

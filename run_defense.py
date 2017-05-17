@@ -30,8 +30,7 @@ def main(argv):
     batchsize = 500                          # Fixing batchsize
     no_of_mags = 50                          # No. of deviations to consider
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
-    # Reduced dimensions used
-    rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+
 
     # Create model_dict from arguments
     model_dict = model_dict_create()
@@ -41,10 +40,17 @@ def main(argv):
     dataset = model_dict['dataset']
     if (dataset == 'MNIST') or (dataset == 'GTSRB'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+        # Reduced dimensions used
+        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
         X_val = None
         y_val = None
+
+    mean = np.mean(X_train, axis=0)
+    X_train -= mean
+    X_test -= mean
+    if (dataset == 'MNIST') or (dataset == 'GTSRB'): X_val -= mean
 
     data_dict, test_prediction, dr_alg, X_test, input_var, target_var = \
         model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val)
@@ -53,9 +59,9 @@ def main(argv):
     print('Creating adversarial samples...')
     adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
                                         target_var, test_prediction, dev_list,
-                                        X_test, y_test)
+                                        X_test, y_test, mean)
     print_output(model_dict, output_list, dev_list)
-    save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
+    # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # Run defense
     defense = model_dict['defense']
