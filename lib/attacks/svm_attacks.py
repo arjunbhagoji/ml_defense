@@ -33,7 +33,7 @@ def min_dist_calc(x, clf):
 #------------------------------------------------------------------------------#
 
 
-def mult_cls_atk(clf, X, mean, dev_mag):
+def mult_cls_atk(clf, X_test, mean, dev_mag, img_flag):
     """
     Returns
     (1) Adversarial samples generated from <X_test> for linear SVM <clf>
@@ -56,9 +56,10 @@ def mult_cls_atk(clf, X, mean, dev_mag):
         y_ini[i] = ini_class
 
     # Clip adv. examples if its values exceed original input range
-    X_adv += mean
-    np.clip(X_adv, 0, 1)
-    X_adv -= mean
+    if img_flag:
+        X_adv += mean
+        np.clip(X_adv, 0, 1)
+        X_adv -= mean
 
     return X_adv, y_ini
 #------------------------------------------------------------------------------#
