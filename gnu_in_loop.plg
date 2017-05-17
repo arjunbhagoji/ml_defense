@@ -1,5 +1,5 @@
-# set terminal epslatex size 8cm, 6cm
-set terminal png size 1200,900
+set terminal epslatex size 8cm, 6cm standalone
+# set terminal png size 1200,900
 set termoption dash
 
 # Line style for axes
@@ -70,7 +70,7 @@ set xrange [0:2.5]
 set yrange [0:1.0]
 # set margins 3, 1, 2, 2
 set key right bottom
-set title 'Optimal Attack on '.mname
+set title 'Retrain defense on '.mname
 
 plot for [IDX=0:6] string_o.mname.'.txt' i (2*IDX) using 1:4 with lines linestyle (IDX+1) title columnheader(1)
 
