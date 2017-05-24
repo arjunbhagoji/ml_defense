@@ -13,12 +13,14 @@ def class_means(X, y):
     classes = np.unique(y)
     no_of_classes = len(classes)
     means = []
+    class_frac = []
     for item in classes:
         indices = np.where(y == item)[0]
         class_items = X[indices, :]
+        class_frac.append(float(len(class_items))/float(len(X)))
         mean = np.mean(class_items, axis=0)
         means.append(mean)
-    return means
+    return means, class_frac
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -26,18 +28,20 @@ def length_scales(X, y):
 
     """Find distances from each class mean to means of the other classes"""
 
-    means = class_means(X, y)
+    means, class_frac = class_means(X, y)
     no_of_classes = len(means)
     scales = []
     for i in range(no_of_classes):
+        mean_diff = 0.0
         curr_mean = means[i]
-        curr_scales = []
+        mean_not_i = 0.0
+        curr_frac = class_frac[i]
         for j in range(no_of_classes):
             if i == j: continue
             else:
-                mean_diff = curr_mean - means[j]
-                curr_scales.append(np.linalg.norm(mean_diff))
-        scales.append(np.amin(curr_scales))
+                mean_not_i = mean_not_i + means[j]
+        mean_diff = curr_frac*curr_mean - (1-curr_frac)*(mean_not_i/(no_of_classes-1))
+        scales.append(np.linalg.norm(mean_diff))
     return scales
 #------------------------------------------------------------------------------#
 

@@ -9,6 +9,7 @@ from lib.utils.data_utils import load_dataset, get_data_shape
 from lib.utils.dr_utils import *
 from lib.utils.plot_utils import *
 from lib.attacks.svm_attacks import *
+from lib.utils.attack_utils import length_scales, class_means
 
 def main():
     # Parse arguments and store in model_dict
@@ -55,6 +56,15 @@ def main():
         ofile.write('{},{} \n'.format(i, np.linalg.norm(clf.coef_[i])))
     ofile.write('\n\n')
 
+    # Finding distance between means
+    fname2 = 'means_' + model_dict['dataset']
+    meanfile = open(abs_path_o + fname2 + '.txt', 'a')
+    lengths = length_scales(X_train_flat, y_train)
+    for l in lengths:
+        meanfile.write('{} \n'.format(l))
+    meanfile.write('\n \n')
+    meanfile.close()
+
     coef_var_list=[]
 
     test_len = data_dict['test_len']
@@ -68,8 +78,8 @@ def main():
     # coef_var_list.append(zip(var_list, coef_list))
 
     if dataset == 'MNIST':
-        rd_list = [100]    # Reduced dimensions to use
-        # rd_list = [784, 100]
+        # rd_list = [100]    # Reduced dimensions to use
+        rd_list = [784]
     elif dataset == 'HAR':
         rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
@@ -89,8 +99,6 @@ def main():
         # Test model on original data
         model_tester(model_dict, clf, X_test_dr, y_test, adv, None, rd, rev_flag)
 
-        print clf.coef_[2,:].shape
-
         ofile.write(DR+'_{}\n'.format(rd))
         for i in range(model_dict['classes']):
             ofile.write('{},{} \n'.format(i, np.linalg.norm(clf.coef_[i])))
@@ -100,8 +108,9 @@ def main():
 
         var_array = np.sqrt(np.var(X_test_dr, axis=0))
         var_list = list(var_array)
-        coef_norm_dr = np.linalg.norm(clf.coef_[2,:])
-        coef_list_dr = list(abs(clf.coef_[2,:]))
+        coef_norm_dr = np.linalg.norm(clf.coef_[0,:]-clf.coef_[1,:])
+        coef_list_dr = list(abs(clf.coef_[0,:]-clf.coef_[1,:]))
+        print np.max(coef_list_dr)
         coef_var_list.append(zip(var_list, coef_list_dr))
 
     mag_var_scatter(model_dict, coef_var_list, len(rd_list), rd, rev_flag)

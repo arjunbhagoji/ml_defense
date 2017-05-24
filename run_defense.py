@@ -64,16 +64,16 @@ def main(argv):
     # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # Run defense
-    defense = model_dict['defense']
-    if defense != None:
-        for rd in rd_list:
-            if defense == 'recons':
-                recons_defense(model_dict, data_dict, input_var, target_var,
-                               test_prediction, dev_list, adv_x_ini, rd,
-                               X_train, y_train, X_test, y_test)
-            elif defense == 'retrain':
-                retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
-                                y_train, X_test, y_test, X_val, y_val)
+    # defense = model_dict['defense']
+    # if defense != None:
+    #     for rd in rd_list:
+    #         if defense == 'recons':
+    #             recons_defense(model_dict, data_dict, input_var, target_var,
+    #                            test_prediction, dev_list, adv_x_ini, rd,
+    #                            X_train, y_train, X_test, y_test)
+    #         elif defense == 'retrain':
+    #             retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
+    #                             y_train, X_test, y_test, X_val, y_val)
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#

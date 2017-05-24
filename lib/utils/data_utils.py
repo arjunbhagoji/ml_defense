@@ -89,7 +89,7 @@ def model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_model_name(model_dict, rd=None):
+def get_model_name(model_dict, rd = None):
     """Resolve a model's name to save/load based on model_dict"""
 
     model_name = model_dict['model_name']

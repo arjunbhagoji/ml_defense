@@ -12,7 +12,7 @@ def mag_var_scatter(model_dict, gradient_var_list, no_of_dims, rd = None, rev = 
     of the data
     """
 
-    f, axarr = plt.subplots(no_of_dims, 1, sharex=True, figsize=(12,9))
+    f, axarr = plt.subplots(no_of_dims, 1, sharex=True, figsize=(12,4))
     grad_v_curr = gradient_var_list[0]
     axarr.plot(zip(*grad_v_curr)[0], zip(*grad_v_curr)[1], 'bo')
     # for i in range(no_of_dims):
@@ -27,9 +27,9 @@ def mag_var_scatter(model_dict, gradient_var_list, no_of_dims, rd = None, rev = 
     ax.tick_params(labelcolor='None', top='off', bottom='off', left='off',
                    right='off')
     plt.xlabel('Standard deviation of component')
-    plt.ylabel(r'Magnitude of coefficient of unit vector $\mathbf{w}$', labelpad = 20)
-    ax.set_ylim([0,1.4])
-    plt.title('Magnitude-variance scatter plot')
+    plt.ylabel(r'Magnitude of $i^{th}$' + '\n' + r'component of $\mathbf{w}$', labelpad = 20)
+    axarr.set_ylim([0,3.0])
+    # plt.title('Magnitude-variance scatter plot for MNIST data')
     abs_path = resolve_path()
     rel_path_p = 'plots/'
     abs_path_p = os.path.join(abs_path, rel_path_p)

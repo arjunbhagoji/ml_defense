@@ -66,18 +66,19 @@ def main():
     dataset = model_dict['dataset']
     if (dataset == 'MNIST'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
-        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-        # rd_list = [784]
+        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        rd_list = [784]
     elif dataset == 'GTSRB':
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
         rd_list = [1024, 338, 200, 100, 90, 80, 70, 60, 50, 40, 33, 30, 20, 10]
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
-        rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        # rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        rd_list = [561]
         X_val = None
         y_val = None
 
-    mean = np.mean(X_train,axis=0)
+    mean = np.mean(X_train, axis=0)
     X_train -= mean
     X_test -= mean
     if (dataset == 'MNIST') or (dataset == 'GTSRB'): X_val -= mean
