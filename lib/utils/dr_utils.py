@@ -154,7 +154,6 @@ def invert_dr(X, dr_alg, DR):
     return X_rev
 #------------------------------------------------------------------------------#
 
-
 def gradient_transform(model_dict, dr_alg):
 
     DR = model_dict['dim_red']
@@ -192,7 +191,6 @@ def gradient_transform(model_dict, dr_alg):
                           dimensionality reduction')
     return A
 #------------------------------------------------------------------------------#
-
 
 def dr_wrapper(X_train, X_test, DR, rd, y_train, rev=None, X_val=None):
     """

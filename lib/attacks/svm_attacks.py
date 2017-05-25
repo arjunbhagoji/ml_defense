@@ -41,12 +41,12 @@ def mult_cls_atk(clf, X_test, mean, dev_mag, img_flag):
     (2) Predicted labels of <X_test> by <clf>
     """
 
-    test_len = len(X_test)
-    X_adv = np.zeros((test_len, X_test.shape[1]))
-    y_ini = np.zeros(test_len)
+    X_len = len(X)
+    X_adv = np.zeros((X_len, X.shape[1]))
+    y_ini = np.zeros(X_len)
 
-    for i in range(test_len):
-        x_ini = X_test[i, :].reshape(1, -1)
+    for i in range(X_len):
+        x_ini = X[i, :].reshape(1, -1)
         ini_class = clf.predict(x_ini)
         min_index, min_dist = min_dist_calc(x_ini, clf)
         w = clf.coef_[int(ini_class[0]), :]
@@ -58,7 +58,7 @@ def mult_cls_atk(clf, X_test, mean, dev_mag, img_flag):
     # Clip adv. examples if its values exceed original input range
     if img_flag:
         X_adv += mean
-        X_adv = np.clip(X_adv, 0, 1)
+        np.clip(X_adv, 0, 1)
         X_adv -= mean
 
     return X_adv, y_ini

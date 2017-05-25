@@ -9,6 +9,7 @@ from lib.utils.data_utils import load_dataset, get_data_shape
 from lib.utils.dr_utils import *
 from lib.utils.plot_utils import *
 from lib.attacks.svm_attacks import *
+from lib.utils.attack_utils import length_scales, class_means
 
 def main():
     # Parse arguments and store in model_dict
@@ -16,6 +17,7 @@ def main():
     DR = model_dict['dim_red']
     rev_flag = model_dict['rev']
     strat_flag = 1
+    adv = None
 
     # Load dataset and create data_dict to store metadata
     print('Loading data...')
@@ -54,6 +56,15 @@ def main():
         ofile.write('{},{} \n'.format(i, np.linalg.norm(clf.coef_[i])))
     ofile.write('\n\n')
 
+    # Finding distance between means
+    fname2 = 'means_' + model_dict['dataset']
+    meanfile = open(abs_path_o + fname2 + '.txt', 'a')
+    lengths = length_scales(X_train_flat, y_train)
+    for l in lengths:
+        meanfile.write('{} \n'.format(l))
+    meanfile.write('\n \n')
+    meanfile.close()
+
     coef_var_list=[]
 
     test_len = data_dict['test_len']
@@ -61,13 +72,14 @@ def main():
 
     var_array = np.sqrt(np.var(X_test_flat, axis=0))
     var_list = list(var_array)
-    coef_list = list(abs(clf.coef_[0,:]))
+    coef_norm = np.linalg.norm(clf.coef_[0,:])
+    coef_list = list(abs(clf.coef_[0,:])/coef_norm)
 
-    coef_var_list.append(zip(var_list, coef_list))
+    # coef_var_list.append(zip(var_list, coef_list))
 
     if dataset == 'MNIST':
-        rd_list = [331, 100, 80, 60, 40, 20]    # Reduced dimensions to use
-        # rd_list = [784, 100]
+        # rd_list = [100]    # Reduced dimensions to use
+        rd_list = [784]
     elif dataset == 'HAR':
         rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
@@ -75,15 +87,17 @@ def main():
         print('Reduced dimensions: {}'.format(rd))
 
         # Dimension reduce dataset and reshape
-        X_train_dr, _, dr_alg = dr_wrapper(
+        X_train_dr, X_test_dr, dr_alg = dr_wrapper(
             X_train_flat, X_test_flat, DR, rd, y_train, rev=rev_flag)
 
+        print X_test_dr.shape
+
         # With dimension reduced dataset, create new model or load existing one
-        clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
+        clf = model_creator(model_dict, X_train_dr, y_train, adv, rd, rev_flag)
         # Modify classifier to include transformation matrix
-        clf = model_transform(model_dict, clf, dr_alg)
+        # clf = model_transform(model_dict, clf, dr_alg)
         # Test model on original data
-        model_tester(model_dict, clf, X_test_flat, y_test, rd, rev_flag)
+        model_tester(model_dict, clf, X_test_dr, y_test, adv, None, rd, rev_flag)
 
         ofile.write(DR+'_{}\n'.format(rd))
         for i in range(model_dict['classes']):
@@ -92,10 +106,14 @@ def main():
 
         no_of_features = data_dict['no_of_features']
 
-        coef_list_dr = list(abs(clf.coef_[0,:]))
+        var_array = np.sqrt(np.var(X_test_dr, axis=0))
+        var_list = list(var_array)
+        coef_norm_dr = np.linalg.norm(clf.coef_[0,:]-clf.coef_[1,:])
+        coef_list_dr = list(abs(clf.coef_[0,:]-clf.coef_[1,:]))
+        print np.max(coef_list_dr)
         coef_var_list.append(zip(var_list, coef_list_dr))
 
-    mag_var_scatter(model_dict, coef_var_list, len(rd_list)+1, rd, rev_flag)
+    mag_var_scatter(model_dict, coef_var_list, len(rd_list), rd, rev_flag)
 
 if __name__ == "__main__":
     main()

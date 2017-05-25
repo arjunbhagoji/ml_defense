@@ -60,7 +60,39 @@ def build_hidden_fc(in_shape, n_out, input_var=None, activation='sigmoid',
     layers.append(layer_2)
     # Output layer:
     softmax = lasagne.nonlinearities.softmax
-    network = lasagne.layers.DenseLayer(layer_2, n_out, nonlinearity=softmax)
+    layer_3 = lasagne.layers.DenseLayer(layer_2, n_out, nonlinearity=None)
+    layers.append(layer_3)
+    network = lasagne.layers.NonlinearityLayer(layer_3, nonlinearity=softmax)
+
+    return network, layers
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+
+def build_hidden_fc_rd(in_shape, n_out, input_var=None, activation='sigmoid',
+                    WIDTH=100, rd = None):
+
+    """
+    Function to create a neural network with 2 hidden layers of configurable
+    width Returns each hidden layer as well, so regularization can be added.
+    """
+    layers = []
+    # Input layer and dropout (with shortcut `dropout` for `DropoutLayer`):
+    in_layer = lasagne.layers.InputLayer(shape=in_shape, input_var=input_var)
+    # Hidden layers and dropout:
+    if activation == 'sigmoid':
+        nonlin = lasagne.nonlinearities.sigmoid
+    elif activation == 'relu':
+        nonlin = lasagne.nonlinearities.rectify
+    layer_1 = lasagne.layers.DenseLayer(in_layer, rd, nonlinearity=None)
+    layers.append(layer_1)
+    layer_2 = lasagne.layers.DenseLayer(layer_1, WIDTH, nonlinearity=nonlin)
+    layers.append(layer_2)
+    layer_3 = lasagne.layers.DenseLayer(layer_2, WIDTH, nonlinearity=nonlin)
+    layers.append(layer_3)
+    # Output layer:
+    softmax = lasagne.nonlinearities.softmax
+    network = lasagne.layers.DenseLayer(layer_3, n_out, nonlinearity=softmax)
 
     return network, layers
 #------------------------------------------------------------------------------#

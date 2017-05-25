@@ -57,8 +57,6 @@ def main():
     # Create model_dict from arguments
     model_dict = model_dict_create()
 
-    # Reduced dimensions used
-
     # No. of deviations to consider
     no_of_mags = 50
     dev_list = np.linspace(0.1, 5.0, no_of_mags)
@@ -66,14 +64,21 @@ def main():
     # Load dataset specified in model_dict
     print('Loading data...')
     dataset = model_dict['dataset']
-    if (dataset == 'MNIST') or (dataset == 'GTSRB'):
+    if (dataset == 'MNIST'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
-        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-        # rd_list = [784]
+        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        rd_list = [784]
+    elif dataset == 'GTSRB':
+        X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
+        rd_list = [1024, 338, 200, 100, 90, 80, 70, 60, 50, 40, 33, 30, 20, 10]
     elif dataset == 'HAR':
         X_train, y_train, X_test, y_test = load_dataset(model_dict)
+        # rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        rd_list = [561]
+        X_val = None
+        y_val = None
 
-    mean = np.mean(X_train,axis=0)
+    mean = np.mean(X_train, axis=0)
     X_train -= mean
     X_test -= mean
     if (dataset == 'MNIST') or (dataset == 'GTSRB'): X_val -= mean
@@ -87,7 +92,7 @@ def main():
                                         target_var, test_prediction, dev_list,
                                         X_test, y_test, mean)
     print_output(model_dict, output_list, dev_list)
-    # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
+    # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list, mean)
 
     # partial_strategic_attack=partial(strategic_attack,X_train=X_train,
     # y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)
