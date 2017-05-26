@@ -13,9 +13,10 @@ from ..utils.data_utils import *
 from ..utils.dr_utils import gradient_transform
 
 #------------------------------------------------------------------------------#
+
+
 def fgs(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
         gradient, dr_alg, rd, mean):
-
     """
     Performs Fast Sign Gradient attack and put perturbed examples in <adv_x>.
 
@@ -50,28 +51,27 @@ def fgs(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
         mean = mean.reshape((1, curr_dim))
 
     if model_dict['clip'] is not None:
-        x_adv_curr = np.clip(x_curr_orig + dev_mag*delta_x_sign + mean, 0, 1)
+        x_adv_curr = np.clip(x_curr_orig + dev_mag * delta_x_sign + mean, 0, 1)
     else:
-        x_adv_curr = x_curr_orig + dev_mag*delta_x_sign + mean
+        x_adv_curr = x_curr_orig + dev_mag * delta_x_sign + mean
     x_adv_curr -= mean
 
     if dr_alg is not None:
-        x_adv_curr = np.dot(x_adv_curr.reshape((batch_len,curr_dim)), A.T)
+        x_adv_curr = np.dot(x_adv_curr.reshape((batch_len, curr_dim)), A.T)
 
     if no_of_dim == 3:
-        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_adv_curr.reshape((batch_len,
-                                                    channels, features_per_c))
+        adv_x[b_c * batch_len:(b_c + 1) * batch_len] = x_adv_curr.reshape(
+            (batch_len,channels, features_per_c))
     elif no_of_dim == 4:
         height = data_dict['height']
         width = data_dict['width']
-        adv_x[b_c*batch_len:(b_c + 1)*batch_len] = x_adv_curr.reshape((batch_len,
-                                                    channels, height, width))
+        adv_x[b_c * batch_len:(b_c + 1) * batch_len] = x_adv_curr.reshape(
+            (batch_len, channels, height, width))
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
        gradient, dr_alg, rd, mean):
-
     """
     Performs Fast Gradient attack and put perturbed examples in <adv_x>.
 
@@ -109,23 +109,25 @@ def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
             else:
                 if model_dict['clip'] is not None:
                     x_adv_curr = np.clip(x_curr_orig[i] + dev_mag
-                                    * (delta_x[i]/delta_x_norm[i]) + mean, 0, 1)
+                                * (delta_x[i] / delta_x_norm[i]) + mean, 0, 1)
                 else:
-                    x_adv_curr = x_curr_orig[i] + dev_mag * (delta_x[i]/delta_x_norm[i]) + mean
+                    x_adv_curr = x_curr_orig[i] + dev_mag * \
+                        (delta_x[i] / delta_x_norm[i]) + mean
                 x_adv_curr -= mean
                 if dr_alg is not None:
-                    adv_x[b_c*batch_len + i] = np.dot(x_adv_curr, A.T)
-                else: adv_x[b_c*batch_len + i] = x_adv_curr
+                    adv_x[b_c * batch_len + i] = np.dot(x_adv_curr, A.T)
+                else:
+                    adv_x[b_c * batch_len + i] = x_adv_curr
     elif no_of_dim == 3:
         if dr_alg is not None:
             curr_dim = delta_x.shape[1]
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                          curr_dim), axis=2)
+                                                          curr_dim), axis=2)
             x_curr_orig = x_curr_orig.reshape(batch_len, channels, curr_dim)
             delta_x = delta_x.reshape(batch_len, channels, curr_dim)
         else:
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                          features_per_c), axis=2)
+                                                        features_per_c), axis=2)
         mean = mean.reshape(channels, curr_dim)
         for i in range(batch_len):
             for j in range(channels):
@@ -133,47 +135,51 @@ def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
                     x_adv_curr = x_curr_orig[i, j]
                 else:
                     if model_dict['clip'] is not None:
-                        x_adv_curr = np.clip(x_curr_orig[i,j] + dev_mag
-                                    *(delta_x[i, j]/delta_x_norm[i, j]) + mean[j], 0, 1)
+                        x_adv_curr = np.clip(x_curr_orig[i, j] + dev_mag
+                        * (delta_x[i, j] / delta_x_norm[i, j]) + mean[j], 0, 1)
                     else:
-                        x_adv_curr = x_curr_orig[i,j] + dev_mag *(delta_x[i, j]/delta_x_norm[i, j]) + mean[j]
+                        x_adv_curr = x_curr_orig[i, j] + dev_mag * \
+                            (delta_x[i, j] / delta_x_norm[i, j]) + mean[j]
                     x_adv_curr -= mean[j]
                     if dr_alg is not None:
-                        x_adv_curr = np.dot(x_adv_curr.reshape(1, curr_dim), A.T)
-                adv_x[b_c*batch_len + i, j] = x_adv_curr.reshape(1, channels, features_per_c)
+                        x_adv_curr = np.dot(
+                            x_adv_curr.reshape(1, curr_dim), A.T)
+                adv_x[b_c * batch_len + i,
+                      j] = x_adv_curr.reshape(1, channels, features_per_c)
     elif no_of_dim == 4:
         height = data_dict['height']
         width = data_dict['width']
         if dr_alg is not None:
             curr_dim = delta_x.shape[1]
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                          curr_dim), axis=2)
+                                                          curr_dim), axis=2)
             delta_x = delta_x.reshape(batch_len, channels, height, width)
             # delta_x = np.dot(delta_x.reshape(batch_len, curr_dim), A.T)
         else:
             delta_x_norm = np.linalg.norm(delta_x.reshape(batch_len, channels,
-                                          features_per_c), axis=2)
+                                                        features_per_c), axis=2)
         for i in range(batch_len):
             for j in range(channels):
                 if delta_x_norm[i, j] == 0.0:
                     x_adv_curr = x_curr_orig[i, j]
                 else:
                     if model_dict['clip'] is not None:
-                        x_adv_curr = np.clip(x_curr_orig[i,j] + dev_mag
-                                    *(delta_x[i, j]/delta_x_norm[i, j]) + mean[j], 0, 1)
+                        x_adv_curr = np.clip(x_curr_orig[i, j] + dev_mag
+                        * (delta_x[i, j] / delta_x_norm[i, j]) + mean[j], 0, 1)
                     else:
-                        x_adv_curr = x_curr_orig[i,j] + dev_mag * (delta_x[i, j]/delta_x_norm[i, j]) + mean[j]
+                        x_adv_curr = x_curr_orig[i, j] + dev_mag * \
+                            (delta_x[i, j] / delta_x_norm[i, j]) + mean[j]
                     x_adv_curr -= mean[j]
                     if dr_alg is not None:
-                        x_adv_curr = np.dot(x_adv_curr.reshape(1, curr_dim), A.T)
-                adv_x[b_c*batch_len + i, j] = x_adv_curr.reshape(1, channels, height, width)
+                        x_adv_curr = np.dot(
+                            x_adv_curr.reshape(1, curr_dim), A.T)
+                adv_x[b_c * batch_len + i,
+                      j] = x_adv_curr.reshape(1, channels, height, width)
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-# Function to create adv. examples using the FSG method
+
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
                    dev_list, X_test, y_test, mean, dr_alg=None, rd=None):
-
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -209,11 +215,12 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     gradient = grad_fn(input_var, target_var, test_prediction)
 
     # Creating array of zeros to store adversarial samples
-    if no_of_dim == 2: adv_x = np.zeros((adv_len, no_of_features))
+    if no_of_dim == 2:
+        adv_x = np.zeros((adv_len, no_of_features))
     elif no_of_dim == 3:
         features = data_dict['features_per_c']
         adv_x = np.zeros((adv_len, channels, features))
-    elif no_of_dim ==4:
+    elif no_of_dim == 4:
         height = data_dict['height']
         width = data_dict['width']
         adv_x = np.zeros((adv_len, channels, height, width))
@@ -234,7 +241,7 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         b_c = 0
         for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
-            x_curr_orig = X_test_orig[b_c*batch_len:(b_c+1)*batch_len]
+            x_curr_orig = X_test_orig[b_c * batch_len:(b_c + 1) * batch_len]
             if model_dict['attack'] == 'fgs':
                 fgs(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x,
                     dev_mag, b_c, gradient, dr_alg, rd, mean)
@@ -246,7 +253,7 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
                                    indexer, predictor, confidence))
         # Saving adversarial examples
-        adv_x_all[:,:,mag_count] = adv_x.reshape((adv_len, no_of_features))
+        adv_x_all[:, :, mag_count] = adv_x.reshape((adv_len, no_of_features))
         mag_count += 1
         print('Finished adv. samples with magnitude {:.3f}: took {:.3f}s'
               .format(dev_mag, time.time() - start_time))
@@ -254,85 +261,87 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     return adv_x_all, o_list
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def l_bfgs_attack(input_var, target_var, test_prediction, X_test, y_test,
                   rd=None, max_dev=None):
     # C_list=[0.7]
-    C=0.7
-    bfgs_iter=None
-    trial_size=1000
-    X_test=X_test[0:trial_size]
-    y_test=y_test[0:trial_size]
-    validator,indexer,predictor,confidence=local_fns(input_var,target_var,
-                                                                test_prediction)
-    deviation_list=[]
+    C = 0.7
+    bfgs_iter = None
+    trial_size = 1000
+    X_test = X_test[0:trial_size]
+    y_test = y_test[0:trial_size]
+    validator, indexer, predictor, confidence = local_fns(input_var, target_var,
+                                                          test_prediction)
+    deviation_list = []
     # for C in C_list:
-    count_wrong=0.0
-    count_tot=0
-    deviation=0.0
-    magnitude=0.0
-    count_correct=0.0
-    adv_x=[]
-    r_mat=[]
-    x_used=[]
-    y_used=[]
-    o_list=[]
+    count_wrong = 0.0
+    count_tot = 0
+    deviation = 0.0
+    magnitude = 0.0
+    count_correct = 0.0
+    adv_x = []
+    r_mat = []
+    x_used = []
+    y_used = []
+    o_list = []
     for i in range(trial_size):
         print i
-        def f(x):
-            loss_curr,acc_curr=validator(X_curr+
-                                            x.reshape((1,1,rd)),y_curr)
-            return C*np.linalg.norm(x)+loss_curr
 
-        y_old=y_test[i].reshape((1,))
-        y_curr=y_test[np.random.randint(0,trial_size,1)]
-        if y_old==y_curr:
+        def f(x):
+            loss_curr, acc_curr = validator(X_curr +
+                                            x.reshape((1, 1, rd)), y_curr)
+            return C * np.linalg.norm(x) + loss_curr
+
+        y_old = y_test[i].reshape((1,))
+        y_curr = y_test[np.random.randint(0, trial_size, 1)]
+        if y_old == y_curr:
             continue
-        X_curr=X_test[i].reshape((1,1,rd))
-        X_curr_flat=X_curr.reshape((rd))
+        X_curr = X_test[i].reshape((1, 1, rd))
+        X_curr_flat = X_curr.reshape((rd))
         x_used.append(X_curr)
         y_used.append(y_old)
-        ini_class=predictor(X_curr)
+        ini_class = predictor(X_curr)
         #print ("Actual class is {}".format(y_old))
         # upper_limit=np.ones(rd)-X_curr_flat
         # lower_limit=np.zeros(rd)-X_curr_flat
         # bound=zip(lower_limit,upper_limit)
-        x_0=np.zeros(rd)
-        r,fval,info=scipy.optimize.fmin_l_bfgs_b(f,x_0,approx_grad=1)
-                                                # bounds=bound)
-        adv_x.append(X_curr+r.reshape((1,1,rd)))
-        r_mat.append(r.reshape((1,1,rd)))
+        x_0 = np.zeros(rd)
+        r, fval, info = scipy.optimize.fmin_l_bfgs_b(f, x_0, approx_grad=1)
+        # bounds=bound)
+        adv_x.append(X_curr + r.reshape((1, 1, rd)))
+        r_mat.append(r.reshape((1, 1, rd)))
         # adv_x=X_adv_dr[count_tot,:].reshape((1,1,rd))
-        prediction_curr=predictor(X_curr+r.reshape((1,1,rd)))
+        prediction_curr = predictor(X_curr + r.reshape((1, 1, rd)))
         # r=adv_x.reshape((rd))-X_curr_flat
-        #Counting successful adversarial examples
-        if ini_class[0]==y_test[i]:
-            count_correct=count_correct+1
+        # Counting successful adversarial examples
+        if ini_class[0] == y_test[i]:
+            count_correct = count_correct + 1
             # magnitude=magnitude+np.sqrt(np.sum(X_curr_flat**2)/rd)
-            magnitude=magnitude+np.linalg.norm(X_curr_flat)
-        if prediction_curr[0]!=ini_class[0] and ini_class[0]==y_test[i]:
-            if max_dev!=None:
-                if np.linalg.norm(r)<max_dev:
-                    count_wrong=count_wrong+1
-            elif max_dev==None:
-                count_wrong=count_wrong+1
+            magnitude = magnitude + np.linalg.norm(X_curr_flat)
+        if prediction_curr[0] != ini_class[0] and ini_class[0] == y_test[i]:
+            if max_dev != None:
+                if np.linalg.norm(r) < max_dev:
+                    count_wrong = count_wrong + 1
+            elif max_dev == None:
+                count_wrong = count_wrong + 1
             # deviation=deviation+np.sqrt(np.sum(r**2)/rd)
-            deviation=deviation+np.linalg.norm(r)
+            deviation = deviation + np.linalg.norm(r)
         deviation_list.append(np.linalg.norm(r))
-        count_tot+=1
-    adv_x=np.array(adv_x).reshape((count_tot,1,rd))
-    y_used=np.array(y_used).reshape(count_tot)
-    x_used=np.array(x_used).reshape((count_tot,1,rd))
+        count_tot += 1
+    adv_x = np.array(adv_x).reshape((count_tot, 1, rd))
+    y_used = np.array(y_used).reshape(count_tot)
+    x_used = np.array(x_used).reshape((count_tot, 1, rd))
     # indices_c=indexer(x_used,y_used)
     # i_c=np.where(indices_c==1)[0]
     #
     # o_list.append(acc_calc_all(adv_x,y_used,x_used,i_c,validator,indexer,
     #                                                 predictor,confidence))
-    o_list.append([deviation/count_wrong,magnitude/count_correct,count_wrong/count_correct*100])
+    o_list.append([deviation / count_wrong, magnitude /
+                   count_correct, count_wrong / count_correct * 100])
     # print o_list
     # print deviation_list
-    print deviation/count_wrong
-    print magnitude/count_correct
-    print count_wrong/count_correct
+    print deviation / count_wrong
+    print magnitude / count_correct
+    print count_wrong / count_correct
     print count_correct
-    return adv_x,o_list,deviation_list
+    return adv_x, o_list, deviation_list

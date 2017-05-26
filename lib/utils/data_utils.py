@@ -40,14 +40,16 @@ def model_dict_create():
     parser.add_argument('-dr', '--dim_red', default='pca', type=str,
                         help='Specify dimension reduction scheme')
     parser.add_argument('--rev', action='store_true',
-            help='Train SVM and attack on DR sample reverted to original space')
+                        help='Train SVM and attack on DR sample reverted \
+                        to original space')
     parser.add_argument('-r', '--reg', default=None, type=str,
                         help='Specify type of regularization to use')
     parser.add_argument('-b', '--batchsize', default=500, type=int,
                         help='Specify batchsize to use')
-    parser.add_argument('-pp','--preprocess', default=None, type=str,
-        help='Specify preprocessing on dataset (std, whiten, antiwhiten(*)) \
-             (default: None) \n (*) is degree of covariance (>= -1)')
+    parser.add_argument('-pp', '--preprocess', default=None, type=str,
+                        help='Specify preprocessing on dataset (std, whiten, \
+                        antiwhiten(*)) (default: None) \n (*) is degree of \
+                        covariance (>= -1)')
     parser.add_argument('-nl', '--nonlin', default='sigmoid', type=str,
                         help='Specify activaton function to use')
 
@@ -89,7 +91,7 @@ def model_dict_create():
 #------------------------------------------------------------------------------#
 
 
-def get_model_name(model_dict, rd = None):
+def get_model_name(model_dict, rd=None):
     """Resolve a model's name to save/load based on model_dict"""
 
     model_name = model_dict['model_name']
@@ -244,20 +246,20 @@ def load_dataset_GTSRB(model_dict):
     return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def load_dataset_HAR(model_dict):
     abs_path_i = resolve_path_i(model_dict)
-    X_train = np.loadtxt(abs_path_i+'train/X_train.txt')
-    y_train = np.loadtxt(abs_path_i+'train/y_train.txt')
-    X_test = np.loadtxt(abs_path_i+'test/X_test.txt')
-    y_test = np.loadtxt(abs_path_i+'test/y_test.txt')
+    X_train = np.loadtxt(abs_path_i + 'train/X_train.txt')
+    y_train = np.loadtxt(abs_path_i + 'train/y_train.txt')
+    X_test = np.loadtxt(abs_path_i + 'test/X_test.txt')
+    y_test = np.loadtxt(abs_path_i + 'test/y_test.txt')
 
     y_train = y_train - 1
     y_test = y_test - 1
     return X_train, y_train, X_test, y_test
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def preprocess(model_dict, data):
     """
     Preprocess data (tuple of X_train, y_train, X_val, y_val, X_test, y_test)
@@ -298,7 +300,7 @@ def preprocess(model_dict, data):
     return X_train, y_train, X_val, y_val, X_test, y_test
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
+
 def load_dataset(model_dict):
     """Load and return dataset specified in model_dict"""
 
@@ -332,7 +334,6 @@ def get_data_shape(X_train, X_test, X_val=None):
     if X_val is not None:
         val_len = len(X_val)
         data_dict.update({'val_len': val_len})
-    # else : val_len = None
 
     # Updates number of dimensions of data
     no_of_dim = X_train.ndim
@@ -343,8 +344,9 @@ def get_data_shape(X_train, X_test, X_val=None):
         no_of_features = X_train.shape[1]
         channels = 1
         features_per_c = no_of_features
-        data_dict.update({'no_of_features': no_of_features, 'channels': channels,
-                              'features_per_c': features_per_c})
+        data_dict.update({'no_of_features': no_of_features,
+                          'channels': channels,
+                          'features_per_c': features_per_c})
     elif no_of_dim == 3:
         channels = X_train.shape[1]
         features_per_c = X_train.shape[2]
@@ -356,11 +358,11 @@ def get_data_shape(X_train, X_test, X_val=None):
         channels = X_train.shape[1]
         height = X_train.shape[2]
         width = X_train.shape[3]
-        features_per_c = height*width
-        no_of_features = channels*features_per_c
-        data_dict.update({'height':height, 'width':width, 'channels':channels,
-                          'features_per_c':features_per_c,
-                          'no_of_features':no_of_features})
+        features_per_c = height * width
+        no_of_features = channels * features_per_c
+        data_dict.update({'height': height, 'width': width, 'channels': channels,
+                          'features_per_c': features_per_c,
+                          'no_of_features': no_of_features})
 
     return data_dict
 #------------------------------------------------------------------------------#
@@ -439,11 +441,12 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, mean, rd=None,
                     adv += mean
                     orig += mean
                     img.imsave(abs_path_v +
-                        '{}_{}_{}_{}_mag{}.png'.format(atk, i, DR, d, dev_mag),
-                        adv * 255,
-                        vmin=0,
-                        vmax=255,
-                        cmap='gray')
+                               '{}_{}_{}_{}_mag{}.png'.format(
+                                   atk, i, DR, d, dev_mag),
+                               adv * 255,
+                               vmin=0,
+                               vmax=255,
+                               cmap='gray')
                     img.imsave(
                         abs_path_v +
                         '{}_{}_{}_orig.png'.format(i, DR, rd),
@@ -456,8 +459,8 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, mean, rd=None,
                 adv_x_curr = adv_x[indices, :, dev_count]
                 for i in indices:
                     adv = adv_x_curr[i].reshape((height, width))
-                    orig = (X_curr[i]+mean[0]).reshape((height, width))
-                    mean_arr = mean[0].reshape((height,width))
+                    orig = (X_curr[i] + mean[0]).reshape((height, width))
+                    mean_arr = mean[0].reshape((height, width))
                     adv += mean[0]
                     if rd is not None:
                         fname = abs_path_v + ' {}_{}_{}_rev_{}'.format(atk, i,
@@ -465,10 +468,9 @@ def save_images(model_dict, data_dict, X_test, adv_x, dev_list, mean, rd=None,
                     elif rd is None:
                         fname = abs_path_v + '{}_{}'.format(atk, i)
                     img.imsave(fname + '_mag{}.png'.format(dev_mag), adv * 255,
-                                vmin =0, vmax =255, cmap='gray')
-                    img.imsave(fname + '_orig.png', orig * 255, vmin =0, vmax =255, cmap='gray')
-                    img.imsave(fname + '_mean.png', mean_arr * 255, vmin =0, vmax =255, cmap='gray')
-                    # img.imsave('test_new.png', (X_curr[0]+mean[0]).reshape((height,width)) * 255,  cmap='gray')
+                               vmin=0, vmax=255, cmap='gray')
+                    img.imsave(fname + '_orig.png', orig * 255,
+                               vmin=0, vmax=255, cmap='gray')
             dev_count += 1
     # else:
         # TODO
@@ -640,10 +642,10 @@ def resolve_path_v(model_dict):
     channels = model_dict['channels']
     defense = model_dict['defense']
     script_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-    rel_path_v = 'visual_data/' + dataset + '/' + model_name
     if dataset == 'GTSRB':
-        rel_path_v += str(channels)
-    if defense is not None:
+        dataset += str(channels)
+    rel_path_v = 'visual_data/' + dataset + '/' + model_name
+    if defense:
         rel_path_v += '/' + defense
     abs_path_v = os.path.join(script_dir, rel_path_v + '/')
     if not os.path.exists(abs_path_v):
