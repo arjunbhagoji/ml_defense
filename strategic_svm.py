@@ -96,7 +96,7 @@ def main(argv):
     print('Performing attack...')
     if model_dict['classes'] != 2:
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf, X_test_flat, mean, dev_list[i],
+            X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i],
                                         img_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
             if img_flag:
@@ -122,8 +122,8 @@ def main(argv):
         print('Reduced dimensions: {}'.format(rd))
 
         # Dimension reduce dataset and reshape
-        X_train_dr, _, dr_alg = dr_wrapper(
-            X_train, X_test, DR, rd, y_train, rev=rev_flag)
+        X_train_dr, _, _, dr_alg = dr_wrapper(
+            X_train, X_test, None, DR, rd, y_train, rev=rev_flag)
 
         # With dimension reduced dataset, create new model or load existing one
         clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
