@@ -9,6 +9,7 @@
 /svm_visual_data
 /plots
 /.ipynb_checkpoints
+/carlini_images
 *.pyc
 *.zip
 *.pem
