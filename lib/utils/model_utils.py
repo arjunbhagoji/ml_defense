@@ -4,7 +4,9 @@ creating Lasagne model, loading parameters to model, saving parameters, and
 setting up model.
 """
 
-import sys, os, argparse
+import sys
+import os
+import argparse
 import numpy as np
 
 from lib.utils.data_utils import *
@@ -13,9 +15,10 @@ from lib.utils.theano_utils import *
 from lib.utils.dr_utils import *
 
 #------------------------------------------------------------------------------#
-def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
-                  layer=None):
 
+
+def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
+                  layer_flag=None):
     """
     Create a Lasagne model/network as specified in <model_dict> and check
     whether the model already exists in model folder.
@@ -44,52 +47,55 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
 
     #------------------------------- CNN model --------------------------------#
     if model_name == 'cnn':
-        # # No dimension reduction on CNN
-        # if rd != None:
-        #     raise ValueError('Cannot reduce dimension on CNN')
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 50
+        if n_epoch is not None:
+            num_epochs = n_epoch
+        else:
+            num_epochs = 50
         depth = 9
         width = 'papernot'
         rate = 0.01
         activation = model_dict['nonlin']
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width})
+        model_dict.update({'num_epochs': num_epochs, 'rate': rate,
+                           'depth': depth, 'width': width})
         network = build_cnn(in_shape, n_out, input_var)
 
     #------------------------------- MLP model --------------------------------#
     elif model_name == 'mlp':
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 500
+        if n_epoch is not None:
+            num_epochs = n_epoch
+        else:
+            num_epochs = 500
         depth = 2
         width = 100
         rate = 0.01
         activation = model_dict['nonlin']
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width})
-        if layer is not None:
-            network, layers = build_hidden_fc(in_shape, n_out,
-                                                        input_var, activation,
-                                                        width)
-        # if rd is None:
-        network, _= build_hidden_fc(in_shape, n_out, input_var, activation,
-                                        width)
-        # elif rd is not None:
-        #     network, _ = build_hidden_fc_rd(in_shape, n_out, input_var, activation, width, rd)
+        model_dict.update({'num_epochs': num_epochs, 'rate': rate,
+                           'depth': depth, 'width': width})
+        if layer_flag:
+            network, layers = build_hidden_fc(in_shape, n_out, input_var,
+                                              activation, width)
+        else:
+            network, _ = build_hidden_fc(in_shape, n_out, input_var, activation,
+                                         width)
+        # if rd:
+        #     network, _ = build_hidden_fc_rd(in_shape, n_out, input_var,
+        #                                     activation, width, rd)
 
     #------------------------------ Custom model ------------------------------#
     elif model_name == 'custom':
-        if n_epoch is not None: num_epochs = n_epoch
-        else: num_epochs = 500
+        if n_epoch is not None:
+            num_epochs = n_epoch
+        else:
+            num_epochs = 500
         depth = 2
         width = 100
         drop_in = 0.2
         drop_hidden = 0.5
         rate = 0.01
         activation = model_dict['nonlin']
-        model_dict.update({'num_epochs':num_epochs, 'rate':rate, 'depth':depth,
-                           'width':width, 'drop_in':drop_in,
-                           'drop_hidden':drop_hidden})
+        model_dict.update({'num_epochs': num_epochs, 'rate': rate,
+                           'depth': depth, 'width': width, 'drop_in': drop_in,
+                           'drop_hidden': drop_hidden})
         network = build_custom_mlp(in_shape, n_out, input_var, activation,
                                    int(depth), int(width), float(drop_in),
                                    float(drop_hidden))
@@ -97,17 +103,17 @@ def model_creator(model_dict, data_dict, input_var, target_var, rd=None,
     abs_path_m = resolve_path_m(model_dict)
     model_path = abs_path_m + get_model_name(model_dict, rd)
     model_exist_flag = 0
-    if os.path.exists(model_path + '.npz'): model_exist_flag = 1
+    if os.path.exists(model_path + '.npz'):
+        model_exist_flag = 1
 
-    if layer is not None:
+    if layer_flag:
         return network, model_exist_flag, layers
     else:
         return network, model_exist_flag
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_loader(model_dict, rd=None):
 
+def model_loader(model_dict, rd=None):
     """
     Load parameters of the saved Lasagne model
     """
@@ -118,13 +124,13 @@ def model_loader(model_dict, rd=None):
     model_path = abs_path_m + mname
 
     with np.load(model_path + '.npz') as f:
-        param_values = [np.float32(f['arr_%d' % i]) for i in range(len(f.files))]
+        param_values = [np.float32(f['arr_%d' % i])
+                        for i in range(len(f.files))]
     return param_values
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_saver(network, model_dict, rd=None):
 
+def model_saver(network, model_dict, rd=None):
     """
     Save model parameters in model foler as .npz file compatible with Lasagne
     """
@@ -137,51 +143,51 @@ def model_saver(network, model_dict, rd=None):
     np.savez(model_path + '.npz', *lasagne.layers.get_all_param_values(network))
 #------------------------------------------------------------------------------#
 
-#------------------------------------------------------------------------------#
-def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val,
-                y_val, rd=None, layer=None):
 
+def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val, y_val,
+                rd=None, layer=None):
     """
     Main function to set up network (create, load, test, save)
     """
+
     rev = model_dict['rev']
     dim_red = model_dict['dim_red']
-    if rd != None:
+    if rd:
         # Doing dimensionality reduction on dataset
         print("Doing {} with rd={} over the training data".format(dim_red, rd))
-        if X_val is not None:
-            X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
-                                                    y_train, rev, X_val)
-        else:
-            X_train, X_test, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
-                                                    y_train, rev, X_val)
-    else: dr_alg = None
-    # dr_alg = None
+        X_train, X_test, X_val, dr_alg = dr_wrapper(X_train, X_test, X_val,
+                                                    dim_red, rd, y_train, rev)
+    else:
+        dr_alg = None
 
     # Getting data parameters after dimensionality reduction
     data_dict = get_data_shape(X_train, X_test, X_val)
     no_of_dim = data_dict['no_of_dim']
 
     # Prepare Theano variables for inputs and targets
-    if no_of_dim == 2: input_var = T.matrix('inputs')
-    elif no_of_dim == 3: input_var = T.tensor3('inputs')
-    elif no_of_dim == 4: input_var = T.tensor4('inputs')
+    if no_of_dim == 2:
+        input_var = T.matrix('inputs')
+    elif no_of_dim == 3:
+        input_var = T.tensor3('inputs')
+    elif no_of_dim == 4:
+        input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
     # Check if model already exists
-    if layer is not None:
-        network, model_exist_flag, layers = model_creator(model_dict, data_dict, input_var,
-                                                  target_var, rd, layer)
+    if layer:
+        network, model_exist_flag, layers = model_creator(model_dict, data_dict,
+                                                          input_var, target_var,
+                                                          rd, layer)
     else:
         network, model_exist_flag = model_creator(model_dict, data_dict,
                                                   input_var, target_var, rd,
                                                   layer)
 
-    #Defining symbolic variable for network output
+    # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
-    #Defining symbolic variable for network parameters
+    # Defining symbolic variable for network parameters
     params = lasagne.layers.get_all_params(network, trainable=True)
-    #Defining symbolic variable for network output with dropout disabled
+    # Defining symbolic variable for network output with dropout disabled
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
 
     # Building or loading model depending on existence
@@ -198,8 +204,8 @@ def model_setup(model_dict, X_train, y_train, X_test, y_test, X_val,
                           X_val, y_val, network, layers)
         else:
             model_trainer(input_var, target_var, prediction, test_prediction,
-                      params, model_dict, X_train, y_train,
-                      X_val, y_val, network)
+                          params, model_dict, X_train, y_train,
+                          X_val, y_val, network)
         model_saver(network, model_dict, rd)
 
     # Evaluating on retrained inputs
@@ -246,7 +252,7 @@ def generate_data(data, samples, targeted=True, start=0, inception=False):
 
 
 def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
-                y_val, mean, ax=None, layer=None):
+                        y_val, mean, ax=None, layer=None):
     """
     Main function to set up network (create, load, test, save)
     """
@@ -256,9 +262,10 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
     if rd != None:
         # Doing dimensionality reduction on dataset
         print("Doing {} with rd={} over the training data".format(dim_red, rd))
-        _, _, _, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd,
-                                     y_train, rev, X_val)
-    else: dr_alg = None
+        _, _, _, dr_alg = dr_wrapper(X_train, X_test, dim_red, rd, y_train, rev,
+                                     X_val)
+    else:
+        dr_alg = None
 
     # Getting data parameters after dimensionality reduction
     data_dict = get_data_shape(X_train, X_test, X_val)
@@ -276,10 +283,10 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
     # Check if model already exists
     if layer is not None:
         network, model_exist_flag, layers = model_creator(model_dict, data_dict,
-            input_var, target_var, rd, layer)
+                                            input_var, target_var, rd, layer)
     else:
         network, model_exist_flag = model_creator(model_dict, data_dict,
-            input_var, target_var, rd, layer)
+                                    input_var, target_var, rd, layer)
 
     # Defining symbolic variable for network output
     prediction = lasagne.layers.get_output(network)
@@ -301,7 +308,8 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
 
         model = Sequential()
         if rd is not None:
-            model.add(Dense(rd, activation=None, input_shape=(784,), use_bias=False))
+            model.add(Dense(rd, activation=None,
+                            input_shape=(784,), use_bias=False))
             model.add(Dense(100, activation='sigmoid'))
         else:
             model.add(Dense(100, activation='sigmoid', input_shape=(784,)))
@@ -360,14 +368,14 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
                 dist = np.linalg.norm((adv[i] + mean_flat) - (inputs[i] + 0.5))
                 if np.argmax(pred[i]) == y_test[i]:
                     dists.append(dist)
-                if i<50:
+                if i < 50:
                     # Save original test and adversarial images
                     x_adv = (adv[i] + mean_flat).reshape((28, 28))
                     orig = (inputs[i] + 0.5).reshape((28, 28))
-                    img.imsave('./carlini_images/{}_adv.png'.format(i), x_adv * 255, vmin=0,
-                               vmax=255, cmap='gray')
-                    img.imsave('./carlini_images/{}_orig.png'.format(i), orig * 255,
-                               vmin=0, vmax=255, cmap='gray')
+                    img.imsave('./carlini_images/{}_adv.png'.format(i),
+                               x_adv * 255, vmin=0, vmax=255, cmap='gray')
+                    img.imsave('./carlini_images/{}_orig.png'.format(i),
+                               orig * 255, vmin=0, vmax=255, cmap='gray')
 
             # Test overall accuracy of the model
             pred = model.predict(inputs + 0.5 - mean_flat)
@@ -375,16 +383,18 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
             for i in range(pred.shape[0]):
                 if np.argmax(pred[i]) == y_test[i]:
                     correct += 1
-            print 'Overall accuracy on test images: ', correct / float(pred.shape[0])
+            print('Overall accuracy on test images: ',
+                  correct / float(pred.shape[0]))
 
             pred = model.predict(adv)
             correct = 0
             for i in range(pred.shape[0]):
                 if np.argmax(pred[i]) == y_test[i]:
                     correct += 1
-            print 'Overall accuracy on adversarial images: ', correct / float(pred.shape[0])
+            print('Overall accuracy on adversarial images: ',
+                  correct / float(pred.shape[0]))
 
-            dists_sorted =sorted(dists)
+            dists_sorted = sorted(dists)
 
             for i in range(len(dists)):
                 plotfile.write('{} {} \n'.format(i, dists_sorted[i]))
@@ -394,17 +404,17 @@ def model_setup_carlini(rd, model_dict, X_train, y_train, X_test, y_test, X_val,
             # dists = np.array(dists)
             # ax.hist(dists, 50, normed=1, histtype='step', cumulative=True,label=str(rd))
 
-
     elif model_exist_flag == 0:
         # Launch the training loop.
         print("Starting training...")
         if layer is not None:
             model_trainer(input_var, target_var, prediction, test_prediction,
-                params, model_dict, X_train, y_train, X_val, y_val, network,
-                layers)
+                          params, model_dict, X_train, y_train, X_val, y_val,
+                          network, layers)
         else:
             model_trainer(input_var, target_var, prediction, test_prediction,
-                params, model_dict, X_train, y_train, X_val, y_val, network)
+                          params, model_dict, X_train, y_train, X_val, y_val,
+                          network)
         model_saver(network, model_dict, rd)
 
     # Evaluating on retrained inputs

@@ -77,55 +77,47 @@ def main(argv):
 
     DR = model_dict['dim_red']
     rev_flag = model_dict['rev']
+    
+    if dataset == 'GTSRB':
+        dataset += str(model_dict['channels'])
+    fname = dataset + '/' + fname
+    # Call gnuplot to plot adv. success vs. mag.
+    subprocess.call(
+        ["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
 
     # Retrain defense and strategic attack
-    # print('--------------Retrain Defense--------------')
-    # for rd in rd_list:
-    #     output_list = []
-    #     strat_flag = None
-    #     is_defense = 1
-    #     print('Reduced dimensions: {}'.format(rd))
-    #
-    #     # Dimension reduce dataset and reshape
-    #     X_train_dr, _, dr_alg = dr_wrapper(
-    #         X_train, X_test, DR, rd, y_train, rev_flag)
-    #
-    #     # With dimension reduced dataset, create new model or load existing one
-    #     clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
-    #     # Modify classifier to include transformation matrix
-    #     clf = model_transform(model_dict, clf, dr_alg)
-    #
-    #     model_tester(model_dict, clf, X_test, y_test, rd, rev_flag)
-    #
-    #     for i in range(n_mag):
-    #         output_list.append(acc_calc_all(clf, X_adv_all[:,:,i], y_test, y_ini))
-    #
-    #     print_svm_output(model_dict, output_list, dev_list, rd, strat_flag,
-    #                      rev_flag, is_defense)
-    #     # subprocess.call(
-    #     #     ["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
-    #
-    #     strat_flag = 1
-    #     output_list = []
-    #     # Strategic attack: create new adv samples based on retrained clf
-    #     print('Performing strategic attack...')
-    #     for i in range(n_mag):
-    #         X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i])
-    #         output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-    #         if img_flag != None:
-    #             save_svm_images(model_dict, data_dict, X_test, X_adv,
-    #                         dev_list[i], rd, dr_alg, rev_flag)
-    #
-    #     fname = print_svm_output(model_dict, output_list, dev_list, rd,
-    #                              strat_flag, rev_flag)
+    print('--------------Retrain Defense & Strategic Attack--------------')
+    for rd in rd_list:
+        output_list = []
+        print('Reduced dimensions: {}'.format(rd))
 
-    # fname = dataset +'_' + fname
-    # subprocess.call(
-    #     ["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
+        # Dimension reduce dataset and reshape
+        X_train_dr, _, _, dr_alg = dr_wrapper(
+            X_train, X_test, None, DR, rd, y_train, rev=rev_flag)
+
+        # With dimension reduced dataset, create new model or load existing one
+        clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
+        # Modify classifier to include transformation matrix
+        clf = model_transform(model_dict, clf, dr_alg=dr_alg, M=M)
+        # Test model trained on dimension reduced data
+        model_tester(model_dict, clf, X_test, y_test, rd, rev_flag)
+
+        # Strategic attack: create new adv samples based on retrained clf
+        print('Performing strategic attack...')
+        for i in range(n_mag):
+            X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i],
+                                        img_flag)
+            output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
+            if img_flag:
+                save_svm_images(model_dict, data_dict, X_test + mean,
+                                X_adv + mean, dev_list[i], rd, dr_alg, rev_flag)
+
+    fname = dataset + '/' + fname
+    subprocess.call(
+        ["gnuplot -e \"mname='{}'\" gnu_in_loop.plg".format(fname)], shell=True)
 #------------------------------------------------------------------------------#
 
 
-#------------------------------------------------------------------------------#
 if __name__ == "__main__":
     main(sys.argv[1:])
 #------------------------------------------------------------------------------#
