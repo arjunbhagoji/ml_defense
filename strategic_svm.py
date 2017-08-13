@@ -30,11 +30,6 @@ def main(argv):
     n_features = data_dict['no_of_features']
     test_len = data_dict['test_len']
 
-    if model_dict['dataset'] == 'MNIST' or model_dict['dataset'] == 'GTSRB':
-        img_flag = True
-    else:
-        img_flag = False
-
     X_adv_all = np.zeros((test_len, n_features, n_mag))
     output_list = []
     adv_flag = 1
@@ -88,6 +83,7 @@ def main(argv):
     DR = model_dict['dim_red']
     rev_flag = model_dict['rev']
 
+    dataset = model_dict['dataset']
     if dataset == 'GTSRB':
         dataset += str(model_dict['channels'])
     fname = dataset + '/' + fname
@@ -108,7 +104,7 @@ def main(argv):
         # With dimension reduced dataset, create new model or load existing one
         clf = model_creator(model_dict, X_train_dr, y_train, rd, rev_flag)
         # Modify classifier to include transformation matrix
-        clf = model_transform(model_dict, clf, dr_alg=dr_alg, M=M)
+        clf = model_transform(model_dict, clf, dr_alg=dr_alg)
         # Test model trained on dimension reduced data
         model_tester(model_dict, clf, X_test, y_test, rd, rev_flag)
 
