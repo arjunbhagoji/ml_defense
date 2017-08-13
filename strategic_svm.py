@@ -30,6 +30,11 @@ def main(argv):
     n_features = data_dict['no_of_features']
     test_len = data_dict['test_len']
 
+    if model_dict['dataset'] == 'MNIST' or model_dict['dataset'] == 'GTSRB':
+        img_flag = True
+    else:
+        img_flag = False
+
     X_adv_all = np.zeros((test_len, n_features, n_mag))
     output_list = []
     adv_flag = 1
@@ -37,9 +42,10 @@ def main(argv):
     print('Performing attack...')
     if model_dict['classes'] != 2:
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i])
+            X_adv, y_ini = mult_cls_atk(
+                clf, X_test, mean, dev_list[i], img_flag)
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-            X_adv_all[:,:,i] = X_adv
+            X_adv_all[:, :, i] = X_adv
             if img_flag != None:
                 save_svm_images(model_dict, data_dict, X_test, X_adv,
                                 dev_list[i])
@@ -48,27 +54,31 @@ def main(argv):
     C = model_dict['penconst']
     abs_path_m = resolve_path_m(model_dict)
     # Adversarial training
-    dev_list_train = [0.1,0.5,1.0,1.5,2.0]
+    dev_list_train = [0.1, 0.5, 1.0, 1.5, 2.0]
     # dev_list_train = [0.5]
     for dev_adv in dev_list_train:
         print ('Adversarial training with dev. {}'.format(dev_adv))
         clf_adv = linear_model.SGDClassifier(alpha=C, l1_ratio=0)
-        clf_adv.partial_fit(X_train,y_train,np.unique(y_train))
+        clf_adv.partial_fit(X_train, y_train, np.unique(y_train))
         for epoch in range(5):
             output_list = []
-            X_adv_train, _ = mult_cls_atk(clf_adv, X_train, mean, dev_adv)
-            X_train_new = np.vstack((X_train,X_adv_train))
-            y_train_new = np.hstack((y_train,y_train))
-            clf_adv.partial_fit(X_train_new,y_train_new)
+            X_adv_train, _ = mult_cls_atk(
+                clf_adv, X_train, mean, dev_adv, img_flag)
+            X_train_new = np.vstack((X_train, X_adv_train))
+            y_train_new = np.hstack((y_train, y_train))
+            clf_adv.partial_fit(X_train_new, y_train_new)
             # model_creator(model_dict, X_train_new, y_train_new, adv_flag)
         # Save model
-        joblib.dump(clf_adv, abs_path_m + get_svm_model_name(model_dict, adv_flag, dev_adv) + '.pkl')
+        joblib.dump(clf_adv, abs_path_m +
+                    get_svm_model_name(model_dict, adv_flag, dev_adv) + '.pkl')
         # clf_adv = joblib.load(abs_path_m + get_svm_model_name(model_dict, adv_flag, dev_adv) + '.pkl')
         model_tester(model_dict, clf_adv, X_test, y_test, adv_flag, dev_adv)
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf_adv, X_test, mean, dev_list[i])
+            X_adv, y_ini = mult_cls_atk(
+                clf_adv, X_test, mean, dev_list[i], img_flag)
             output_list.append(acc_calc_all(clf_adv, X_adv, y_test, y_ini))
-        fname = print_svm_output(model_dict, output_list, dev_list, adv_flag, dev_adv)
+        fname = print_svm_output(
+            model_dict, output_list, dev_list, adv_flag, dev_adv)
 
         # subprocess.call(["gnuplot -e \"filename='{}.png'; in_name='{}.txt'\" gnu_in_loop.plg".format(fname,fname)], shell=True)
     # else:
@@ -77,7 +87,7 @@ def main(argv):
 
     DR = model_dict['dim_red']
     rev_flag = model_dict['rev']
-    
+
     if dataset == 'GTSRB':
         dataset += str(model_dict['channels'])
     fname = dataset + '/' + fname
