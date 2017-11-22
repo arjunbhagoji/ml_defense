@@ -472,6 +472,7 @@ def save_svm_images(model_dict, data_dict, X_test, adv_x, dev_mag, rd=None,
         img.imsave(fname + '_orig.png', orig, vmin=0, vmax=1, cmap=cmap)
 #------------------------------------------------------------------------------#
 
+
 def svm_setup():
     # Parse arguments and store in model_dict
     model_dict = svm_model_dict_create()
@@ -503,7 +504,8 @@ def svm_setup():
 
     # Assign parameters
     if dataset == 'MNIST':
-        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
+        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50,
+                   40, 30, 20, 10]    # Reduced dimensions to use
         # rd_list = [784]
         rd_list = [100]
     elif dataset == 'HAR':
@@ -512,11 +514,12 @@ def svm_setup():
     n_rd = len(rd_list)
     clear_flag = None
     # Clear old output files
-    if clear_flag ==1:
+    if clear_flag == 1:
         abs_path_o = resolve_path_o(model_dict)
         _, fname = file_create(model_dict)
         os.remove(abs_path_o + fname + '.txt')
-        _, fname = file_create(model_dict, rd=1, strat=strat_flag, rev=rev_flag)
+        _, fname = file_create(
+            model_dict, rd=1, strat=strat_flag, rev=rev_flag)
         os.remove(abs_path_o + fname + '.txt')
 
     return model_dict, data_dict, X_train_flat, y_train, X_test_flat, y_test, rd_list, mean, img_flag

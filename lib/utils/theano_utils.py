@@ -70,7 +70,8 @@ def loss_fn(model_predict, target_var, reg=None, network=None, layers=None):
             layer_1 = layers[0]
             layer_2 = layers[1]
             layer_dict = {layer_1: 1e-7}
-            l2_penalty = lasagne.regularization.regularize_layer_params_weighted(layer_dict, l2)
+            l2_penalty = lasagne.regularization \
+                .regularize_layer_params_weighted(layer_dict, l2)
         else:
             l2_penalty = (1e-7 *
                 lasagne.regularization.regularize_network_params(network, l2))

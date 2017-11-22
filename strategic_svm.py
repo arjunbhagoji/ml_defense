@@ -37,9 +37,10 @@ def main(argv):
     print('Performing attack...')
     if model_dict['classes'] != 2:
         for i in range(n_mag):
-            X_adv, y_ini = mult_cls_atk(clf, X_test, mean, dev_list[i], None)
+            X_adv, y_ini = mult_cls_atk(
+                clf, X_test, mean, dev_list[i], img_flag)s
             output_list.append(acc_calc_all(clf, X_adv, y_test, y_ini))
-            X_adv_all[:,:,i] = X_adv
+            X_adv_all[:, :, i] = X_adv
             if img_flag != None:
                 save_svm_images(model_dict, data_dict, X_test, X_adv,
                                 dev_list[i])
@@ -98,7 +99,7 @@ def main(argv):
         # With dimension reduced dataset, create new model or load existing one
         clf = model_creator(model_dict, X_train_dr, y_train, None, rd, rev_flag)
         # Modify classifier to include transformation matrix
-        clf = model_transform(model_dict, clf, dr_alg=dr_alg, M=None)
+        clf = model_transform(model_dict, clf, dr_alg=dr_alg)
         # Test model trained on dimension reduced data
         model_tester(model_dict, clf, X_test, y_test, None, None, rd, rev_flag)
 
