@@ -37,8 +37,8 @@ def strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test, y_test,
                                             dev_list, X_test, y_test, mean,
                                             dr_alg, rd)
     # Printing result to file
-    print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
-                 strat_flag=1)
+    # print_output(model_dict, output_list, dev_list, is_defense=False, rd=rd,
+                 # strat_flag=1)
 
     # Save adv. samples to images
     # if (dim_red == 'pca') or (dim_red == 'dca') or (dim_red == None):
@@ -57,8 +57,8 @@ def main():
     model_dict = model_dict_create()
 
     # No. of deviations to consider
-    no_of_mags = 25
-    dev_list = np.linspace(0.1, 2.5, no_of_mags)
+    no_of_mags = 1
+    dev_list = np.linspace(0.1, 0.1, no_of_mags)
 
     # Load dataset specified in model_dict
     print('Loading data...')
@@ -66,7 +66,7 @@ def main():
     if (dataset == 'MNIST'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
         # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
-        rd_list = [784]
+        rd_list = [100]
     elif dataset == 'GTSRB':
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(model_dict)
         rd_list = [1024, 338, 200, 100, 90, 80, 70, 60, 50, 40, 33, 30, 20, 10]
@@ -89,18 +89,18 @@ def main():
 
     # Running attack and saving samples
     print('Creating adversarial samples...')
-    adv_x_ini, output_list = attack_wrapper(model_dict, data_dict, input_var,
-                                            target_var, test_prediction, dev_list, X_test, y_test, mean)
-    print_output(model_dict, output_list, dev_list)
+    adv_x_ini = attack_wrapper(model_dict, data_dict, input_var,
+                                            target_var, test_prediction, dev_list, X_test, y_test, mean=mean)
+    # print_output(model_dict, output_list, dev_list)
 
     # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list, mean)
 
     # partial_strategic_attack=partial(strategic_attack,X_train=X_train,
     # y_train=y_train,X_test=X_test,y_test=y_test,X_val=X_val,y_val=y_val)
 
-    for rd in rd_list:
-        strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test,
-                         y_test, mean, X_val, y_val)
+    # for rd in rd_list:
+    #     strategic_attack(rd, model_dict, dev_list, X_train, y_train, X_test,
+    #                      y_test, mean, X_val, y_val)
 
     # partial_strategic_attack(784)
     # pool=multiprocessing.Pool(processes=8)

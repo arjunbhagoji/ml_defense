@@ -28,8 +28,8 @@ def main(argv):
 
     # Parameters
     batchsize = 500                          # Fixing batchsize
-    no_of_mags = 50                          # No. of deviations to consider
-    dev_list = np.linspace(0.1, 5.0, no_of_mags)
+    no_of_mags = 1                          # No. of deviations to consider
+    dev_list = np.linspace(2.5, 2.5, no_of_mags)
 
     # Create model_dict from arguments
     model_dict = model_dict_create()
@@ -40,7 +40,8 @@ def main(argv):
     if (dataset == 'MNIST'):
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(
             model_dict)
-        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+        rd_list = [100]
     elif dataset == 'GTSRB':
         X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(
             model_dict)
@@ -69,16 +70,16 @@ def main(argv):
     # save_images(model_dict, data_dict, X_test, adv_x_ini, dev_list)
 
     # Run defense
-    # defense = model_dict['defense']
-    # if defense != None:
-    #     for rd in rd_list:
-    #         if defense == 'recons':
-    #             recons_defense(model_dict, data_dict, input_var, target_var,
-    #                            test_prediction, dev_list, adv_x_ini, rd,
-    #                            X_train, y_train, X_test, y_test)
-    #         elif defense == 'retrain':
-    #             retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
-    #                             y_train, X_test, y_test, X_val, y_val)
+    defense = model_dict['defense']
+    if defense != None:
+        for rd in rd_list:
+            if defense == 'recons':
+                recons_defense(model_dict, data_dict, input_var, target_var,
+                               test_prediction, dev_list, adv_x_ini, rd,
+                               X_train, y_train, X_test, y_test)
+            elif defense == 'retrain':
+                retrain_defense(model_dict, dev_list, adv_x_ini, rd, X_train,
+                                y_train, X_test, y_test, X_val, y_val)
 #-----------------------------------------------------------------------------#
 
 

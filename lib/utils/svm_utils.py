@@ -193,6 +193,7 @@ def get_svm_model_name(model_dict, adv=None, adv_mag=None, rd=None, rev=None):
 
     if model_dict['preprocess'] is not None:
         model_name += ('_' + model_dict['preprocess'])
+
     if adv is not None:
         model_name += '_adv_{}'.format(adv_mag)
 
@@ -203,6 +204,7 @@ def get_svm_model_name(model_dict, adv=None, adv_mag=None, rd=None, rev=None):
 
     model_name += '_{}_C{:.0e}'.format(model_dict['penalty'],
                                        model_dict['penconst'])
+    print(model_name)
 
     return model_name
 #------------------------------------------------------------------------------#
@@ -501,8 +503,9 @@ def svm_setup():
 
     # Assign parameters
     if dataset == 'MNIST':
-        rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
+        # rd_list = [784, 331, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]    # Reduced dimensions to use
         # rd_list = [784]
+        rd_list = [100]
     elif dataset == 'HAR':
         rd_list = [561, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
         # rd_list = [561]

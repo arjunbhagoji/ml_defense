@@ -33,7 +33,7 @@ def min_dist_calc(x, clf):
 #------------------------------------------------------------------------------#
 
 
-def mult_cls_atk(clf, X_test, mean, dev_mag, img_flag):
+def mult_cls_atk(clf, X, mean, dev_mag, img_flag):
     """
     Returns
     (1) Adversarial samples generated from <X_test> for linear SVM <clf>

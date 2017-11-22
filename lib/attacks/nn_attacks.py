@@ -49,10 +49,10 @@ def fgs(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
         mean = mean.reshape((1, curr_dim))
 
     if model_dict['clip'] is not None:
-        x_adv_curr = np.clip(x_curr_orig + dev_mag * delta_x_sign + mean, 0, 1)
+        x_adv_curr = np.clip(x_curr_orig + dev_mag * delta_x_sign, 0, 1)
     else:
-        x_adv_curr = x_curr_orig + dev_mag * delta_x_sign + mean
-    x_adv_curr -= mean
+        x_adv_curr = x_curr_orig + dev_mag * delta_x_sign
+    # x_adv_curr -= mean
 
     if dr_alg is not None:
         x_adv_curr = np.dot(x_adv_curr.reshape((batch_len, curr_dim)), A.T)
@@ -177,7 +177,7 @@ def fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x, dev_mag, b_c,
 
 
 def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction,
-                   dev_list, X_test, y_test, mean, dr_alg=None, rd=None):
+                   dev_list, X_test, y_test, mean = None, dr_alg=None, rd=None):
     """
     Creates adversarial examples using the Fast Sign Gradient method. Prints
     output to a .txt file in '/outputs'. All 3 adversarial success counts
@@ -205,11 +205,6 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     # Creating array to store adversarial samples
     adv_x_all = np.zeros((adv_len, no_of_features, n_mags))
 
-    validator, indexer, predictor, confidence = local_fns(input_var, target_var,
-                                                          test_prediction)
-    indices_c = indexer(X_test, y_test)
-    i_c = np.where(indices_c == 1)[0]
-
     gradient = grad_fn(input_var, target_var, test_prediction)
 
     # Creating array of zeros to store adversarial samples
@@ -228,15 +223,26 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
     elif dataset == 'HAR':
         _, _, X_test_orig, _ = load_dataset(model_dict)
 
-    X_test_orig -= mean
+    # X_test_orig -= mean
+
+    validator, indexer, predictor, confidence = local_fns(input_var, target_var,
+                                                          test_prediction)
+    indices_c = indexer(X_test, y_test)
+    i_c = np.where(indices_c == 1)[0]
+
+    test_loss = loss_fn(test_prediction, target_var)
+    test_acc = acc_fn(test_prediction, target_var)
+    validator = val_fn(input_var, target_var, test_loss, test_acc)
 
     o_list = []
     mag_count = 0
     for dev_mag in dev_list:
         adv_x.fill(0)
         start_time = time.time()
-        batch_len = 1000
+        batch_len = 100
         b_c = 0
+        test_err = 0
+        test_acc = 0
         for batch in iterate_minibatches(X_test, y_test, batch_len):
             x_curr, y_curr = batch
             x_curr_orig = X_test_orig[b_c * batch_len:(b_c + 1) * batch_len]
@@ -246,10 +252,22 @@ def attack_wrapper(model_dict, data_dict, input_var, target_var, test_prediction
             elif model_dict['attack'] == 'fg':
                 fg(model_dict, data_dict, x_curr, y_curr, x_curr_orig, adv_x,
                    dev_mag, b_c, gradient, dr_alg, rd, mean)
+            adv_x_curr = adv_x[b_c * batch_len:(b_c + 1) * batch_len]
+            err, acc = validator(adv_x_curr, y_curr)
+            test_err += err
+            test_acc += acc
             b_c += 1
+
+
         # Accuracy vs. true labels. Confidence on mismatched predictions
+
         o_list.append(acc_calc_all(adv_x, y_test, X_test, i_c, validator,
                                    indexer, predictor, confidence))
+
+        print("Final results for {}:".format(dev_mag))
+        print("  test accuracy:\t\t{:.2f} %".format(100.0-o_list[0][4]))
+
+
         # Saving adversarial examples
         adv_x_all[:, :, mag_count] = adv_x.reshape((adv_len, no_of_features))
         mag_count += 1
